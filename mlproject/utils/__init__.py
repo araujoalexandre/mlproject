@@ -18,8 +18,8 @@ from .functions import pickle_dump
 from .functions import to_print
 from .functions import make_submit
 from .functions import load_features_name
-
-# from .startproject import startprojet
+from .functions import find_project_file
+from .functions import inside_project
 
 from .pprint import pprint
 
@@ -30,5 +30,6 @@ __all__ = [
     'to_print',
     'make_submit',
     'load_features_name',
-    # 'startprojet',
+    'find_project_file',
+    'inside_project'
 ]

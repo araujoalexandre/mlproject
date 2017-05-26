@@ -15,6 +15,7 @@ __author__
 
 import os, sys
 import pickle
+
 import datetime
 import pandas as pd
 import numpy as np
@@ -22,27 +23,40 @@ import numpy as np
 
 def make_directory(path):
     """
-        xxx
+        check if folder exist, if not create it
     """
     if not os.path.exists(path):
         os.makedirs(path)
 
+def find_project_file(path='.', prevpath=None):
+    """
+        Return the path to the closest scrapy.cfg file by 
+        traversing the current directory and its parents
+    """
+    if path == prevpath:
+        return ''
+    path = os.path.abspath(path)
+    project_file = os.path.join(path, '.project')
+    if os.path.exists(project_file):
+        return project_file
+    return find_project_file(os.path.dirname(path), path)
+
+def inside_project(path):
+    return bool(find_project_file(path))
 
 def pickle_load(path):
     """
-        xxx
+        function to load pickle object
     """
     with open(path, 'rb') as f:
         return pickle.load(f)
 
-
 def _pickle_dump(file, path):
     """
-        xxx
+        function to dump picke object
     """
     with open(path, 'wb') as f:
         pickle.dump(file, f, -1)
-
 
 def _get_new_name(path):
     """
@@ -57,7 +71,6 @@ def _get_new_name(path):
         i += 1
     return new_path
 
-
 def pickle_dump(file, path, force=False):
     """
         Helper function to dump a file 
@@ -69,14 +82,12 @@ def pickle_dump(file, path, force=False):
         new_path = _get_new_name(path)
         _pickle_dump(file, new_path)
 
-
 def to_print(logger, string):
     """
         print and log string
     """
     print(string)
     logger.info(string)
-
 
 def make_submit(path, name, id_test, preds, score, date, header='id,loss'):
     """
@@ -87,11 +98,10 @@ def make_submit(path, name, id_test, preds, score, date, header='id,loss'):
     args = [path, name, date, score]
     file_name = "{}/submit_{}_{}_{:.5f}_0.00000.csv.gz".format(*args)
     df_submit.to_csv(file_name, index=False, compression='gzip')
-
    
 def load_features_name(path):
     """
-        xxx
+        load features map file
     """
     features_name = []
     with open(path, 'r') as f:
