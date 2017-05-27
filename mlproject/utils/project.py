@@ -1,38 +1,31 @@
+from os import makedirs, pardir
+from os.path import abspath, basename, join, dirname, exists
 
-"""
-__file__
-
-    functions.py
-
-__description__
-
-    This file provides various functions.
-    
-__author__
-
-    Araujo Alexandre < alexandre.araujo@wavestone.fr >
-
-"""
-
-import os, sys
-
-def startprojet():
+def make_directory(path):
     """
-        Create and init folder projet
+        check if folder exist, if not create it
     """
-    if not os.path.exists('code'):
-        os.makedirs('code')
-    if not os.path.exists('jupyter'):
-        os.makedirs('jupyter')
-    if not os.path.exists('models'):
-        os.makedirs('models')
-    for folder_type in ['train', 'test']:
-        if not os.path.exists('data/{}/pkl'.format(folder_type)):
-            os.makedirs('data/{}/pkl'.format(folder_type))
-        if not os.path.exists('data/{}/original'.format(folder_type)):
-            os.makedirs('data/{}/original'.format(folder_type))
-        if not os.path.exists('data/{}/features'.format(folder_type)):
-            os.makedirs('data/{}/features'.format(folder_type))
+    if not exists(path):
+        makedirs(path)
 
-if __name__ == "__main__":
-    startprojet()
+def find_project_file(path='.', prevpath=None):
+    """
+        Return the path to the closest .project file by 
+        traversing the current directory and its parents
+    """
+    if path == prevpath:
+        return ''
+    path = abspath(path)
+    project_file = join(path, '.project')
+    if exists(project_file):
+        return project_file
+    return find_project_file(dirname(path), path)
+
+def parent_folder(path):
+    return basename(abspath(join(path, pardir)))
+
+def current_folder(path):
+    return basename(abspath(path))
+
+def inside_project(path):
+    return bool(find_project_file(path))
