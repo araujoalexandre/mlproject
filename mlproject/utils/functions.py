@@ -30,7 +30,7 @@ def make_directory(path):
 
 def find_project_file(path='.', prevpath=None):
     """
-        Return the path to the closest scrapy.cfg file by 
+        Return the path to the closest project file by 
         traversing the current directory and its parents
     """
     if path == prevpath:
