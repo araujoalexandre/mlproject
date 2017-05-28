@@ -63,7 +63,7 @@ class Command(MlprojectCommand):
         # check all dir in args.model_dirs
         for model_dir in sorted(list(set(args.model_dirs))):
             if not exists(join(models_folder, model_dir)):
-                print("model_dir doesn't exist in models_folder")
+                print("{} doesn't exist in models_folder".format(model_dir))
                 exit(0)
 
         files = []
@@ -71,7 +71,6 @@ class Command(MlprojectCommand):
             if exists(join(models_folder, model_dir)):
                 files += self._find_files(join(models_folder, model_dir))
         self._remove_files(files)
-                
 
     def run(self, args):
         """
