@@ -18,7 +18,7 @@ class Command(MlprojectCommand):
     def add_options(self, parser):
 
         parser.add_argument("models_dir",
-                    help="choose the model dir")
+                    help="choose the model dir to go")
 
     def run(self, args):
         """
