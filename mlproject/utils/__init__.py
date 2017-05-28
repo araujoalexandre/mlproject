@@ -15,6 +15,8 @@ __author__
 from .functions import to_print
 from .functions import make_submit
 from .functions import load_features_name
+from .functions import is_pandas
+from .functions import is_numpy
 
 from .project import make_directory
 from .project import find_project_file
@@ -32,6 +34,8 @@ __all__ = [
     'to_print',
     'make_submit',
     'load_features_name',
+    'is_pandas',
+    'is_numpy',
 
     'make_directory',
     'find_project_file',
