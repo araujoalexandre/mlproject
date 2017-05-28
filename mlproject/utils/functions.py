@@ -2,6 +2,7 @@
     utils functions ...
 """
 import pandas as pd
+import numpas as np
 
 def to_print(logger, string):
     """
@@ -32,3 +33,16 @@ def load_features_name(path):
                 break
             features_name.append(line.split('\t')[1])
     return features_name
+
+def is_pandas(df):
+    """
+        check if df is a pandas DataFrame
+    """
+    return isinstance(df, pd.DataFrame)
+
+def is_numpy(df):
+    """
+        check if df is a numpy array
+    """
+    return isinstance(df, np.ndarray)
+
