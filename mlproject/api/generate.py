@@ -12,7 +12,9 @@ __author__
     Araujo Alexandre < aaraujo001@gmail.com >
 
 """
-from os.path import join
+from os.path import join, isfile
+from logging import getLogger, basicConfig, INFO
+from datetime.datetime import now
 
 
 import os, sys
@@ -39,42 +41,47 @@ class GenerateWrapper:
 
         self.params = params
 
-        self.train_index = None
-        self.cv_index = None
-
-        # self.custom_dump = custom_dump
-
-        self.train_shape = (None, None)
-        self.test_shape = (None, None)
+        self.train_index, self.cv_index = None, None
+        self.train_shape, self.test_shape = (None, None), (None, None)
         
-        self.folder_path = self._create_folder()
         self.log = self._init_logger()
-        
         self._print_params()
+
+        self.date = now().strftime("%Y.%m.%d %H.%M")
 
 
     def _init_logger(self):
         """
             init logger for generate file
         """
-        logger = logging.getLogger()
-        logging.basicConfig(filename='logs.log',level=logging.INFO)
+        path = join('XXX', 'logs.log')
+        logger = getLogger()
+        basicConfig(filename=path, level=INFO)
         return logger
 
+    def _folder_name(self):
+        """
+            xxx
+        """
+        timestamp = str(datetime.datetime.now().strftime("%Y.%m.%d_%H.%M"))
+        self.folder_name = 'model_{}'.format(timestamp)        
 
     def _create_folder(self):
-        timestamp = str(datetime.datetime.now().strftime("%Y.%m.%d_%H.%M"))
-        folder_name = 'model_{}'.format(timestamp)
-        make_directory(join(self.path, 'models', folder_name))
+        """
+            xxx
+        """
+        path = join(self.params.project_path, 'models', self.folder_name)
+        make_directory(path)
 
     def _print_params(self):
         """
             print global params
         """
-        args_msg = [str(datetime.datetime.now().strftime("%Y.%m.%d %H.%M")),
-                    self.folder_path.split('/')[-1],
-                    self.nan_value, 
-                    self.n_folds, 
+
+        args_msg = [self.date,
+                    self.folder_name,
+                    self.nan_value,
+                    self.n_folds,
                     self.seed]
         message = ( "\n### START ###\n\n{}"
                     "\nFolder : {}\n"
@@ -134,24 +141,24 @@ class GenerateWrapper:
         """
 
         if fold is not None:
-            dump_folder = 'Fold_{}'.format(fold)
+            dump_folder = 'fold_{}'.format(fold)
         else:
-            dump_folder = 'Test'
+            dump_folder = 'test'
 
         # create fold or test folder
-        path = "{}/{}".format(self.folder_path, dump_folder)
+        path = join(self.folder_path, dump_folder)
         if not os.path.exists(path):
             os.makedirs(path)
 
-        y_path = '{}/y_{}.pkl'.format(path, name)
-        if y is not None and not os.path.isfile(y_path):
+        y_path = join(path, 'y_{}.pkl'.format(name))
+        if y is not None and not isfile(y_path):
             pickle_dump(y, y_path)
 
-        w_path = '{}/w_{}.pkl'.format(path, name)
-        if weight is not None and not os.path.isfile(w_path):
+        w_path = join(path, 'w_{}.pkl'.format(name))
+        if weight is not None and not isfile(w_path):
             pickle_dump(weight, w_path)
 
-        X_path = '{}/X_{}.{}'.format(path, name, type_)
+        X_path = join(path, 'X_{}.{}'.format(name, type_))
         if type_ == 'xgb':
             if y is not None:
                 dxgb = DMatrix(X, y, missing=self.nan_value, weight=weight)
@@ -180,20 +187,30 @@ class GenerateWrapper:
                 y = np.zeros(len(X))
             self.custom_dump(X, y, X_path)
 
-
     def cleaning(self, df):
         """
             Remove  target features 
                     id features
             fill nan values
         """
+
+        # remove space in columns names and convert to str
+        features = df.columns
+        for i, feat in enumerate(features):
+            features[i] = str(feat).replace(' ', '')
+        df.columns = features
+
+        # drop ids and target columns
         todrop = []
         if self.target_name in df.columns:
             todrop.append(self.target_name)
         if self.id_name in df.columns:
             todrop.append(self.id_name)        
         df.drop(todrop, axis=1, inplace=True)
+        
+        # fillna
         df.fillna(self.nan_value, inplace=True)
+        
         return df
 
     def get_train_infos(self, df):
@@ -215,9 +232,9 @@ class GenerateWrapper:
             function to create features mapping for 
             XGBoost features importance
         """
-        outfile = open('{}/features.map'.format(self.folder_path), 'w')
+        outfile = open(join(self.folder_path, "features.map"), 'w')
         for i, feat in enumerate(self.train_cols_name):
-            outfile.write('{0}\t{1}\tq\n'.format(i, str(feat).replace(' ', '')))
+            outfile.write('{0}\t{1}\tq\n'.format(i, feat))
         outfile.close()
 
 
@@ -226,6 +243,7 @@ class GenerateWrapper:
             xxx
         """
         error = False
+
         if self.train_shape[1] != self.test_shape[1]:
             message = "shape of DataFrames not equal : train {}, test {}"
             shapes = [self.train_shape[1], self.test_shape[1]]
@@ -249,25 +267,25 @@ class GenerateWrapper:
         """
         to_print(self.log, "Dumping Info")
         infos = {
-            'seed': self.seed,
-            'data_path': self.data_path,
-            'folder_path': self.folder_path,
-            'n_folds': self.n_folds,
-            'train_shape': self.train_shape,
-            'test_shape': self.test_shape,
+            "seed": self.seed,
+            "data_path": self.data_path,
+            "folder_path": self.folder_path,
+            "n_folds": self.n_folds,
+            "train_shape": self.train_shape,
+            "test_shape": self.test_shape,
         }
         
-        path = '{}/infos.pkl'.format(self.folder_path)
+        path = join(self.folder_path, "infos.pkl")
         pickle_dump(infos, path)
 
-        path = '{}/y_true.pkl'.format(self.folder_path)
+        path = join(self.folder_path, "y_true.pkl")
         pickle_dump(self.y_true, path)
 
         if self.weights is not None:
             path = '{}/weights.pkl'.format(self.folder_path)
             pickle_dump(self.weights, path)
         
-        path = '{}/validation.pkl'.format(self.folder_path)
+        path = join(self.folder_path, "validation.pkl")
         pickle_dump(self.validation, path)
 
 
@@ -275,10 +293,8 @@ class GenerateWrapper:
         """
             backup dataset.py in folder model
         """
-        files = ["generate.py", "train.py", "parameters.py"]
-        for script_name in files:
-            source = "{}/code/{}".format(self.path, script_name)
-            destination = "{}/{}".format(self.folder_path, script_name)
+        for script_name in ["dataset.py"]:
+            source = join(self.path, "code", script_name)
+            destination = join(self.folder_path, script_name)
             shutil.copyfile(source, destination)
-
 
