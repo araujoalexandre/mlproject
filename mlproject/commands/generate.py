@@ -22,10 +22,10 @@ class Command(MlprojectCommand):
     requires_project = True
 
     def syntax(self):
-        return ""
+        return "[formats]"
 
     def short_desc(self):
-        return "generate dataset for training"
+        return "generate and save dataset for training"
 
     def add_options(self, parser):
 
@@ -115,23 +115,22 @@ class Command(MlprojectCommand):
         
         # clean dataset
         df_train = self.gen.cleaning(df_train)
+        df_test = self.gen.cleaning(df_test)
+
         # save infos
-        self.gen.get_infos(df_train)
+        self.gen.get_train_infos(df_train)
+        self.gen.get_test_infos(df_test)
+
         # save and generate features map
         self.gen.create_feature_map()
+
         # save train fold
         self._save_train_fold(df_train, self.gen.validation)
 
-        # XXX : add condition if not test
-        if do_test:
-
-            # clean dataset
-            df_test = self.gen.cleaning(df_test)
-            # save infos
-            self.gen.get_infos(df_test)
-            # save test
+        # save test and do conformity tests 
+        # between train and test
+        if df_test is not None:
             self._save_test(df_test)
-            # do conformity tests
             self.gen.conformity_test()
 
         # save infos
