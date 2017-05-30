@@ -25,7 +25,7 @@ def _print_header(settings, inproject):
         print("mlproject {} - project: {}, created: {}\n".format(\
             mlproject.__version__, settings['name'], settings['date']))
     else:
-        print("mlprject {} - no active project".format(mlproject.__version__))
+        print("mlproject {} - no active project".format(mlproject.__version__))
 
 def _walk_modules(path):
     mods = []
@@ -103,6 +103,7 @@ def execute():
     cmd.add_options(parser)
     args = parser.parse_args()
     cmd.run(args)
+    sys.exit(5)
 
 
 if __name__ == '__main__':
