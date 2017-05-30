@@ -2,14 +2,8 @@
     utils functions ...
 """
 import pandas as pd
-import numpas as np
+import numpy as np
 
-def to_print(logger, string):
-    """
-        print and log string
-    """
-    print(string)
-    logger.info(string)
 
 def make_submit(path, name, id_test, preds, score, date, header='id,loss'):
     """

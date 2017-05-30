@@ -5,8 +5,9 @@ def make_directory(path):
     """
         check if folder exist, if not create it
     """
-    if not exists(path):
-        makedirs(path)
+    folder_name = current_folder(path)
+    assert not exists(path), "{} already exists".format(folder_name)
+    makedirs(path)
 
 def find_project_file(path='.', prevpath=None):
     """

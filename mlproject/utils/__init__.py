@@ -12,7 +12,6 @@ __author__
     Araujo Alexandre < alexandre.araujo@wavestone.fr >
 
 """
-from .functions import to_print
 from .functions import make_submit
 from .functions import load_features_name
 from .functions import is_pandas
@@ -27,11 +26,14 @@ from .project import inside_project
 from .pkl import pickle_load
 from .pkl import pickle_dump
 
-from .pprint import pprint
+from .log import ProgressTable
+from .log import print_and_log
+from .log import init_log
+
+from .timer import Timer
 
 __all__ = [
 
-    'to_print',
     'make_submit',
     'load_features_name',
     'is_pandas',
@@ -46,5 +48,9 @@ __all__ = [
     'pickle_load',
     'pickle_dump',
     
-    'pprint',
+    'ProgressTable',
+    'print_and_log',
+    'init_log',
+
+    'Timer',
 ]
