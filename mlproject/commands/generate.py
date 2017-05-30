@@ -5,9 +5,14 @@ from sys import exit
 import mlproject
 from mlproject.commands import MlprojectCommand
 from mlproject.api import GenerateWrapper
-from mlproject.utils import pprint
+from mlproject.utils import ProgressTable, print_and_log, init_log
+from mlproject.utils import print_and_log as print_
 from mlproject.utils import current_folder
 from mlproject.utils import Timer
+
+"""
+    this file use the GenerateWrapper API 
+"""
 
 # XXX : print fold X / nb X
 # XXX : Check if dataset got object features
@@ -21,6 +26,11 @@ class Command(MlprojectCommand):
 
     requires_project = True
 
+    def __init__(self):
+
+        self.path = getcwd()
+        self.logger = init_log(self.path)
+
     def syntax(self):
         return "[formats]"
 
@@ -30,19 +40,16 @@ class Command(MlprojectCommand):
     def add_options(self, parser):
 
         choices = ['xgb', 'npz', 'libsvm', 'pkl', 'libffm', 'custom']
-        parser.add_argument('-t','--type', help='Dataset type(s) to generate', 
-                                           nargs='+',
-                                           choices=choices,
-                                           dest='types',
-                                           required=True)
+        parser.add_argument(dest='types', choices=choices, nargs='+',
+                            help='Dataset type(s) to generate') 
         parser.add_argument("--train", dest="train", action="store_true",
                         help="run training after generation")
 
-    def _check_folder(self):
-        path = getcwd()
+    def _inside_code_folder(self, path):
         if not current_folder(path) == "code":
-            print("this command needs to be executed from the code folder")
-            exit(0)
+            print_(self.logger, "this command needs to be "\
+                            "executed from the code folder")
+        
 
     def _load_generate_func(self):
         from dataset import params, create_dataset, validation_splits
@@ -74,28 +81,33 @@ class Command(MlprojectCommand):
 
             message = ('Fold {}/{}\tTrain shape\t[{}|{}]\tCV shape\t[{}|{}]')
             args = [fold, nb_folds, *X_train.shape, *X_cv.shape]
-            self.print_.to_print(message.format(*args))
+            print_(self.logger, message.format(*args))
 
     def _save_test(self, df_test):
         """
         """
         for type_ in self.types:
-            self.gen.dump(df_test, type_, 'test')
-        self.print_.to_print('\tTest shape\t[{}|{}]'.format(*df_test.shape))
+            self.gen.dump(df_test, None, None, None, type_, 'test')
+        print_(self.logger, '\tTest shape\t[{}|{}]'.format(*df_test.shape))
 
     def run(self, args):
         """
             Generate dataset for training
         """
-        self.check_inside_project(getcwd())
-        self._check_folder()
+        if not self._inside_project(self.path): return
+        if not self._inside_code_folder(self.path): return
         self._load_generate_func()
         self._extract_args(args)
 
         self.gen = GenerateWrapper(**self.params)
 
-        # init pprint class
-        self.print_ = pprint(self.gen.log)
+        # XXX no need => only for training step
+        # # init pprint class
+        # self.progess = ProgressTable(self.gen.log)
+
+
+        # XXX : try to load target based on params.target
+        #       if can not load push a comment and run create_dataset without split
 
         # XXX : if validation before creating dataset need to extract first
         # XXX : if params.validaton is a path => load file and generate validation index
@@ -104,11 +116,15 @@ class Command(MlprojectCommand):
                                                         self.gen.y_true)
 
         # Generate df_train & df_test
-        self.print_.to_print('\nMaking train/test dataset')
+        print_(self.logger, '\nMaking train/test dataset')
         with Timer() as t:
             df_train, df_test = self.create_dataset(self.gen.dataset, 
                                                     self.gen.validation)
-        self.print_.to_print('train/test set done in {:.0}'.format(t.interval))
+        print_(self.logger, 'train/test set done in {:.0}'.format(t.interval))
+
+        # XXX : df_train and df_test done
+        # what about making the conformity test now 
+        # detect nan / inf value and raise error if type format not compatible
 
         # extract target features
         self.gen.y_true = df_train[self.params.target_name].values

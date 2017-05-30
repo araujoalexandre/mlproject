@@ -10,40 +10,30 @@ from mlproject.utils import make_directory
 
 
 TEMPLATES_SCRIPTS = [
-    "generate.py.tmpl",
-    "parameters.py.tmpl",
-    "train.py.tmpl",
+    "dataset.py",
+    "parameters.py",
 ]
 
 TEMPLATES_JUPYTER = [
     
 ]
 
+# XXX : verify if the path provided is empty folder
 
 class Command(MlprojectCommand):
 
     requires_project = False
 
     def syntax(self):
-        return "<project_name>"
+        return "<path/project_name>"
 
     def short_desc(self):
         return "Create new project"
 
     def add_options(self, parser):
 
-        parser.add_argument("project_name", 
-                            help="choose the name of the project")
-        choices = ["regression", "multiclass", "binary"]
-        parser.add_argument("--task", choices=choices, default="binary", 
-                        help="choose the task of the project, default binary")
-        parser.add_argument("--no_test", dest="no_test", action="store_true",
-                        help="setup project withouy test set, default false")
-        parser.add_argument("--no_submit", dest="no_submit", action="store_true", 
-                    help="setup project for without submission, default false")
-        # - Does your train set has ids ?
-        # - does your test set has ids ?
-        # - Do you have a target for test
+        parser.add_argument("project_name",
+                        help="choose the path or/and the name of the project")
 
     def render_template(self, file, args):
         return file
@@ -66,30 +56,27 @@ class Command(MlprojectCommand):
             # use Raise instead
             exit("Folder already exists")
 
-        date = datetime.now().strftime(format="%Y.%M.%d")
+        date = datetime.now().strftime(format="%Y.%m.%d")
         with open(join(path, ".project"), "w") as f:
             f.write("mlproject - {} - {}\n".format(project_name, date))
 
         for dir_type in ['code', 'jupyter', 'models', 'data']:
             make_directory(join(path, dir_type))
-        
-        folders = ['train', 'test']
-        if args.no_test: folders.remove('test')
-        path = join(path, )
 
-        for folder in folders:
-            for folder_type in ['pkl', 'orginal', 'features']:
+        for folder in ['train', 'test']:
+            for folder_type in ['binary', 'raw', 'features']:
                 dir_name  = join(path, 'data', folder, folder_type)
                 make_directory(dir_name)
 
         for template in TEMPLATES_SCRIPTS:
             file = get_data('mlproject', join('data', template))
             file = self.render_template(file, args)
+            self._save_file(file, join(path, 'code', template))
 
-            file_name = template[:-5]
-            self._save_file(file, join(path, 'code', file_name))
-
+        # XXX : dynamic name files in message 
         print("New project {} created ".format(project_name))
         print("   {}\n".format(abspath(project_name)))
-        print("   You need to put your datsets in the data folder")
-        print("   Modify the generate.py file in the code folder\n")
+        print("   Put your datasets in the data folder")
+        print("   Update the files bellow in the code folder :")
+        for file in TEMPLATES_SCRIPTS:
+            print("     - {}".format(file))
