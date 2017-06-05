@@ -3,6 +3,7 @@ from os.path import join, exists, abspath
 from sys import exit
 from datetime import datetime
 from pkgutil import get_data
+from argparse import SUPPRESS
 
 import mlproject
 from mlproject.commands import MlprojectCommand
@@ -34,6 +35,8 @@ class Command(MlprojectCommand):
 
         parser.add_argument("project_name",
                         help="choose the path or/and the name of the project")
+        parser.add_argument("--test_code", dest="test_code", 
+                action="store_true", help=SUPPRESS)
 
     def render_template(self, file, args):
         return file
@@ -68,8 +71,10 @@ class Command(MlprojectCommand):
                 dir_name  = join(path, 'data', folder, folder_type)
                 make_directory(dir_name)
 
+        data_folder = 'data_test' if args.test_code else 'data'
+
         for template in TEMPLATES_SCRIPTS:
-            file = get_data('mlproject', join('data', template))
+            file = get_data('mlproject', join(data_folder, template))
             file = self.render_template(file, args)
             self._save_file(file, join(path, 'code', template))
 
