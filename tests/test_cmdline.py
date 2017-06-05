@@ -1,9 +1,10 @@
 
 import unittest
+import glob
 from os.path import exists, join
 from tempfile import TemporaryDirectory
 from subprocess import Popen, PIPE
-
+from itertools import product
 
 
 class CmdlineTests(unittest.TestCase):
@@ -29,6 +30,30 @@ class CmdlineTests(unittest.TestCase):
             for folder in ['binary', 'raw', 'features']:
                 self.assertTrue(exists(join(path, 'data', 'train', folder)))
                 self.assertTrue(exists(join(path, 'data', 'test', folder)))
+
+    def test_generate(self):
+        with TemporaryDirectory() as path:
+
+            # XXX : import this infos
+            extensions = ['xgb', 'npz', 'pkl']
+
+            path = join(path, 'ml_project')
+            cmd = "mlproject startproject {} --test_code;".format(path)
+            cmd += "cd {};".format(join(path, "code"))
+            cmd += "mlproject generate {};".format(' '.join(extensions))
+            process = self._execute(cmd)
+
+            folders = glob.glob(join(path, "models", "**"))
+            self.assertTrue(len(folders))
+
+            path = join(path, "models", folders[0])
+            gen = product(range(5), extensions, ['train', 'cv'])
+            for fold, ext, set_ in gen:
+                self.assertTrue(exists(join(path, "fold_{}".format(fold), 
+                    "X_{}.{}".format(set_, ext))))
+            for ext in extensions:
+                self.assertTrue(exists(join(path, 
+                        "test", "X_test.{}".format(ext))))
 
 
 if __name__ == '__main__':

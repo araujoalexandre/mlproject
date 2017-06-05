@@ -40,8 +40,7 @@ class MlprojectCommand(object):
         pass
 
     def _inside_project(self, path):
-        inproject = inside_project(path)
-        if not inproject:
+        if not inside_project(path):
             print("command needs to be run from inside a project")
             return False
         return True
