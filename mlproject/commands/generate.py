@@ -1,10 +1,12 @@
 from os import getcwd, makedirs
-from os.path import join, exists
+from os.path import join, exists, basename
 from sys import exit
+from argparse import SUPPRESS
 
 import mlproject
 from mlproject.commands import MlprojectCommand
 from mlproject.api import GenerateWrapper
+from mlproject.utils import pickle_load
 from mlproject.utils import ProgressTable, print_and_log, init_log
 from mlproject.utils import print_and_log as print_
 from mlproject.utils import current_folder
@@ -26,11 +28,6 @@ class Command(MlprojectCommand):
 
     requires_project = True
 
-    def __init__(self):
-
-        self.path = getcwd()
-        self.logger = init_log(self.path)
-
     def syntax(self):
         return "[formats]"
 
@@ -49,9 +46,11 @@ class Command(MlprojectCommand):
         if not current_folder(path) == "code":
             print_(self.logger, "this command needs to be "\
                             "executed from the code folder")
-        
+            return False
+        return True
 
     def _load_generate_func(self):
+
         from dataset import params, create_dataset, validation_splits
         self.params = params
         self.create_dataset = create_dataset
@@ -59,96 +58,137 @@ class Command(MlprojectCommand):
 
     def _extract_args(self, args):
         """
+            convert args from argsparse as class attributes
         """
         self.types = args.types
 
-    def _save_train_fold(self, df_train, validation):
+    def _try_load_target(self, path):
+        """
+            try to load target if params.target_train if a path
+        """
+        if not exists(path):
+            return
+        if 'pkl' in basename(path):
+            try:
+                return pickle_load(path)
+            except:
+                return
+        try:
+            with open(path, 'r') as f:
+                l = []
+                while True:
+                    val = f.readine()
+                    if val == '':
+                        break
+                    l.append(float(l))
+            return l
+        except:
+            return
+
+    def _save_train_fold(self, gen, df_train, validation):
         """
             save train folds
         """
-        # loop over validation index
-        nb_folds = len(validation)
-        for fold, (train_index, cv_index) in enumerate(validation):
+        for fold, (tr_index, cv_index) in enumerate(validation):
 
-            self.gen.train_index, self.gen.cv_index = train_index, cv_index
-            y_train, y_cv = self.gen.split_target()
-            w_train, w_cv = self.gen.split_weight()
-            X_train, X_cv = self.gen.split_data(df_train)
+            y_tr, y_cv = gen.split_target(tr_index, cv_index)
+            w_tr, w_cv = gen.split_weights(tr_index, cv_index)
+            g_tr, g_cv = gen.split_groups(tr_index, cv_index)
+            x_tr, x_cv = gen.split_data(df_train, tr_index, cv_index)
+
+            kwtrain = {'y': y_tr, 'weight': w_tr, 'group': g_tr, 'fold': fold}
+            kwcv = {'y': y_cv,'weight': w_cv,'group': g_cv,'fold': fold}
 
             for type_ in self.types:
-                self.gen.dump(X_train, y_train, fold, w_train , type_, 'train')
-                self.gen.dump(X_cv, y_cv, fold, w_cv , type_, 'cv')
+                gen.dump(x_tr, type_, 'train', **kwtrain)
+                gen.dump(x_cv, type_, 'cv', **kwcv)
 
             message = ('Fold {}/{}\tTrain shape\t[{}|{}]\tCV shape\t[{}|{}]')
-            args = [fold, nb_folds, *X_train.shape, *X_cv.shape]
+            args = [fold+1, len(validation), *x_tr.shape, *x_cv.shape]
             print_(self.logger, message.format(*args))
 
-    def _save_test(self, df_test):
+    def _save_test(self, gen, df_test):
         """
+            save test set
         """
+        # XXX : add target if exists
+        # XXX : add weights if exists
+        # XXX : add group if exists
         for type_ in self.types:
-            self.gen.dump(df_test, None, None, None, type_, 'test')
-        print_(self.logger, '\tTest shape\t[{}|{}]'.format(*df_test.shape))
+            gen.dump(df_test, type_, 'test')
+        print_(self.logger, '\t\tTest shape\t[{}|{}]'.format(*df_test.shape))
 
     def run(self, args):
         """
             Generate dataset for training
         """
+        self.path = getcwd()
+
         if not self._inside_project(self.path): return
         if not self._inside_code_folder(self.path): return
         self._load_generate_func()
         self._extract_args(args)
 
-        self.gen = GenerateWrapper(**self.params)
+        params = self.params
+        gen = GenerateWrapper(params)
+
+        # get logger
+        self.logger = gen.logger
 
         # XXX no need => only for training step
         # # init pprint class
         # self.progess = ProgressTable(self.gen.log)
 
 
-        # XXX : try to load target based on params.target
-        #       if can not load push a comment and run create_dataset without split
-
-        # XXX : if validation before creating dataset need to extract first
-        # XXX : if params.validaton is a path => load file and generate validation index
-        # XXX : find a way to load the target
-        self.gen.validation = self.validation_splits(self.gen.n_folds, 
-                                                        self.gen.y_true)
+        # try to load the target 
+        gen.y_true = self._try_load_target(params.target_train)
+        # if target load successful, we make the validation split
+        if gen.y_true:
+            gen.validation = self.validation_splits(params.n_folds, gen.y_true)            
 
         # Generate df_train & df_test
         print_(self.logger, '\nMaking train/test dataset')
         with Timer() as t:
-            df_train, df_test = self.create_dataset(self.gen.dataset, 
-                                                    self.gen.validation)
+            df_train, df_test = self.create_dataset(gen.validation)
         print_(self.logger, 'train/test set done in {:.0}'.format(t.interval))
+
+        if not gen.y_true:
+            # extract target features
+            # XXX : add check target_train in df_train.columns
+            gen.y_true = df_train[params.target_train].values
+            # make validation splits
+            gen.validation = self.validation_splits(params.n_folds, gen.y_true)
+
+        # /!\ : LOAD GROUPS and WEIGHTS
+        gen.weights = None
 
         # XXX : df_train and df_test done
         # what about making the conformity test now 
         # detect nan / inf value and raise error if type format not compatible
 
-        # extract target features
-        self.gen.y_true = df_train[self.params.target_name].values
-        
+        # create folder
+        gen.create_folder()
+
         # clean dataset
-        df_train = self.gen.cleaning(df_train)
-        df_test = self.gen.cleaning(df_test)
+        df_train = gen.cleaning(df_train)
+        df_test = gen.cleaning(df_test)
 
         # save infos
-        self.gen.get_train_infos(df_train)
-        self.gen.get_test_infos(df_test)
+        gen.get_train_infos(df_train)
+        gen.get_test_infos(df_test)
 
         # save and generate features map
-        self.gen.create_feature_map()
+        gen.create_feature_map()
 
         # save train fold
-        self._save_train_fold(df_train, self.gen.validation)
+        self._save_train_fold(gen, df_train, gen.validation)
 
         # save test and do conformity tests 
         # between train and test
         if df_test is not None:
-            self._save_test(df_test)
-            self.gen.conformity_test()
+            self._save_test(gen, df_test)
+            gen.conformity_test()
 
         # save infos
-        self.gen.save_infos()
-        self.gen.copy_script()
+        gen.save_infos()
+        gen.copy_script()
