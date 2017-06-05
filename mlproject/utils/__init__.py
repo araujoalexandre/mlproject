@@ -22,6 +22,7 @@ from .project import find_project_file
 from .project import parent_folder
 from .project import current_folder
 from .project import inside_project
+from .project import project_path
 
 from .pkl import pickle_load
 from .pkl import pickle_dump
@@ -31,6 +32,8 @@ from .log import print_and_log
 from .log import init_log
 
 from .timer import Timer
+
+from .parameters import ParametersSpace
 
 __all__ = [
 
@@ -44,6 +47,7 @@ __all__ = [
     'parent_folder',
     'current_folder',
     'inside_project',
+    'project_path',
 
     'pickle_load',
     'pickle_dump',
@@ -53,4 +57,6 @@ __all__ = [
     'init_log',
 
     'Timer',
+
+    'ParametersSpace',
 ]

@@ -3,11 +3,9 @@ from os.path import abspath, basename, join, dirname, exists
 
 def make_directory(path):
     """
-        check if folder exist, if not create it
+        check if folder exist, if doesn't exist create it
     """
-    folder_name = current_folder(path)
-    assert not exists(path), "{} already exists".format(folder_name)
-    makedirs(path)
+    if not exists(path): makedirs(path)
 
 def find_project_file(path='.', prevpath=None):
     """
@@ -23,10 +21,25 @@ def find_project_file(path='.', prevpath=None):
     return find_project_file(dirname(path), path)
 
 def parent_folder(path):
+    """
+        return parent folder of given path
+    """
     return basename(abspath(join(path, pardir)))
 
 def current_folder(path):
+    """
+        return current folder of given path
+    """
     return basename(abspath(path))
 
 def inside_project(path):
+    """
+        return bool if inside project
+    """
     return bool(find_project_file(path))
+
+def project_path(path):
+    """
+        find and return the path of the project
+    """
+    return dirname(find_project_file(path))

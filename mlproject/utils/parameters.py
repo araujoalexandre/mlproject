@@ -9,13 +9,10 @@ class ParametersSpace:
     def __init__(self, *args, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-        
-        setattr(self, 'data_path', 
-               join(self.project_path, 'data'))
-        
-        for dataset in ['train', 'test']:
-            setattr(self, '{}_path'.format(dataset), 
-                   join(self.data_path, dataset))
-    
+    # XXX : add check for mandatory params
+
     def __repr__(self):
         return str(self.__dict__)
+
+    def as_dict(self):
+        return self.__dict__
