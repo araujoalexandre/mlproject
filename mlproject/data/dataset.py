@@ -1,57 +1,65 @@
 """
     fscipt to generate the dataset
 """
+from os import getcwd
 from os.path import join
-
-from kaggle.helper.GenerateWrapper import GenerateWrapper
-
-from kaggle.utils import ParametersSpace
-from kaggle.utils import pickle_dump, pickle_load
-from kaggle.utils import pprint
+from mlproject.utils import ParametersSpace
+from mlproject.utils import project_path
 
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import StratifiedKFold, KFold, GroupKFold
-
+try:
+    from sklearn.model_selection import StratifiedKFold
+    from sklearn.model_selection import KFold
+    from sklearn.model_selection import GroupKFold
+    SKLEARN_INSTALLED = True
+except ImportError:
+    SKLEARN_INSTALLED = False
 
 ################################
 #####    Globals params    #####
 ################################
 
-params = dict(
-    #project
-    project_path  = 'test',
-    data_path     = join('test', 'data'),
-    seed          = 123456,
-    nan_value     = -1,
+params = ParametersSpace(
 
-    # ids
-    id_train      = 'id',
-    id_test       = 'id_test',
+    # path to the project and to the data folder
+    project_path = project_path(getcwd()),
+    data_path = join(project_path(getcwd()), 'data'),
     
-    # target name
-    target_train  = 'target',
-    target_test   = 'test_target',
+    # names of dataset
+    # the function will generate train_path and test_path attributes
+    train_name = 'train.csv',
+    test_name = 'test.csv',
 
-    # instance weights
-    weights       = '',
+    # seed value for the project
+    seed = 123456,
 
-    # groups
-    group_train   = '',
-    group_test    = '',
+    # value to fill for nan value in dataset
+    nan_value = -1,
 
-    # validation
-    n_folds       = 5,
-    shuffle       = True,
+    # name of the id features in train and test set
+    id_train = 'id',
+    id_test = 'id_test',
+
+    target_train = 'target',
+    target_test = 'test_target',
+
+    weights_train = None,
+
+    group_train = None,
+    group_test = None,
+
+    n_folds = 5,
+    shuffle = True,
 )
 
-def dataset(splits):
+def create_dataset(splits):
     """
         Create your dataset here !
     """
-    train_path = join(params['data_path'], 'train', 'train.csv')
-    test_path = join(params['data_path'], 'test', 'test.csv')
+    train_path = join(params.data_path, 'train', 'train.csv')
+    test_path = join(params.data_path, 'test', 'test.csv')
     
     df_train = pd.read_csv(train_path, nows=20000)
     df_test = pd.read_csv(test_path, nows=20000)
