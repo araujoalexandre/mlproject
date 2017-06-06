@@ -103,7 +103,6 @@ def execute():
     cmd.add_options(parser)
     args = parser.parse_args()
     cmd.run(args)
-    sys.exit(5)
 
 
 if __name__ == '__main__':
