@@ -32,8 +32,6 @@ from .log import ProgressTable
 from .log import print_and_log
 from .log import init_log
 
-from .timer import Timer
-
 from .parameters import ParametersSpace
 
 __all__ = [
@@ -57,8 +55,6 @@ __all__ = [
     'ProgressTable',
     'print_and_log',
     'init_log',
-
-    'Timer',
 
     'ParametersSpace',
 ]
