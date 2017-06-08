@@ -1,16 +1,21 @@
 """
     utils functions ...
 """
+import inspect
+from importlib import import_module
+
 import pandas as pd
 import numpy as np
 
+from mlproject.utils.io import BaseIO
 
-def make_submit(path, name, id_test, preds, score, date, header='id,loss'):
+
+def make_submit(path, name, id_test, yhat, score, date, header=['id','target']):
     """
         Function to create sumbit file for Kaggle competition
     """
     ID, TARGET = header.split(',')
-    df_submit = pd.DataFrame({ID: id_test, TARGET: preds})
+    df_submit = pd.DataFrame({ID: id_test, TARGET: yhat})
     args = [path, name, date, score]
     file_name = "{}/submit_{}_{}_{:.5f}_0.00000.csv.gz".format(*args)
     df_submit.to_csv(file_name, index=False, compression='gzip')
@@ -40,3 +45,12 @@ def is_numpy(df):
     """
     return isinstance(df, np.ndarray)
 
+def get_ext_cls():
+    ext_cls = {}
+    mod = import_module('mlproject.utils.io')
+    for obj in vars(mod).values():
+        if inspect.isclass(obj) and issubclass(obj, BaseIO) \
+            and not obj == BaseIO:
+                obj_ = obj()
+                ext_cls[obj_.ext] = obj_
+    return ext_cls
