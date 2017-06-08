@@ -9,7 +9,7 @@ class ParametersSpace:
     def __init__(self, *args, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-    # XXX : add check for mandatory params
+    # XXX : add check for mandatory
 
     def __repr__(self):
         return str(self.__dict__)

@@ -17,7 +17,6 @@ import sys
 from os.path import join
 from logging import getLogger, basicConfig, INFO
 
-
 def init_log(path):
     filename = join(path, 'logs.log')
     logger = getLogger()
@@ -53,8 +52,7 @@ class ProgressTable:
         self.len_title = len(self.headers)
         self.padding = padding
 
-        # XXX : add condition if logger == None
-        self.logger = logger
+        self.logger = logger.info
 
     def _format_timedelta(self, timedeltaObj):
         """
@@ -70,26 +68,28 @@ class ProgressTable:
         """
         arr = ["|{x: ^{fill}}".format(x=x, fill=self.padding).format(x) 
                                                           for x in self.headers]
-        string = ''.join(arr) + "|"
-        self.to_print('{}\n{}\n{}'.format(self._line(), string, self._line()))
+        string = "".join(arr) + "|"
+        self.logger(self._line)
+        self.logger(string)
+        self.logger(self._line)
 
     def score(self, fold, train, cv, start, end):
         """
             print score and other info 
         """
         if fold == 0: self._title()
-        if fold == None: self.to_print(self._line())
+        if fold == None: self.logger(self._line)
 
         dur = self._format_timedelta(end - start)
         arr = [ fold, '{:.5f}'.format(train), '{:.5f}'.format(cv), 
                 start.strftime("%H:%M:%S"), end.strftime("%H:%M:%S"), dur]
         arr = ["|{x: ^{fill}}".format(x=x, fill=self.padding).format(x) 
                                                                 for x in arr]
-        string = ''.join(arr) + "|"
-        print_and_log(self.logger, string)
-        
-        if fold == None: print_and_log(self.logger, self._line())
+        string = "".join(arr) + "|"
+        self.logger(string)
+        if fold == None: self.logger(self._line)
 
+    @property
     def _line(self):
         """
             print line of score table in training
