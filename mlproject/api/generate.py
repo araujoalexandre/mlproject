@@ -76,14 +76,6 @@ class GenerateWrapper:
                 )
         print_and_log(self.logger, message.format(**args_msg))
 
-    def save_target(self, y):
-        """
-            save target in model folder
-        """
-        y_path = '{}/y_true.pkl'.format(self.folder_path)
-        if y is not None and not isfile(y_path):
-            pickle_dump(y, y_path)
-
     def split_target(self, tr_index, cv_index):
         """
             split target array based on train and cv index
@@ -137,15 +129,15 @@ class GenerateWrapper:
         path = join(self.folder_path, dump_folder)
         make_directory(path)
 
-        # save y_train, y_cv => is it necessary ? 
-        y_path = join(path, 'y_{}.pkl'.format(name))
-        if y is not None and not isfile(y_path):
-            pickle_dump(y, y_path)
+        # # save y_train, y_cv => is it necessary ? 
+        # y_path = join(path, 'y_{}.pkl'.format(name))
+        # if y is not None and not isfile(y_path):
+        #     pickle_dump(y, y_path)
 
-        # save w_train, w_cv => is it necessary ? 
-        w_path = join(path, 'w_{}.pkl'.format(name))
-        if weights is not None and not isfile(w_path):
-            pickle_dump(weights, w_path)
+        # # save w_train, w_cv => is it necessary ? 
+        # w_path = join(path, 'w_{}.pkl'.format(name))
+        # if weights is not None and not isfile(w_path):
+        #     pickle_dump(weights, w_path)
 
         path = join(path, 'X_{}.{}'.format(name, ext))
         cls = get_ext_cls()[ext]
@@ -207,7 +199,6 @@ class GenerateWrapper:
             for i, feat in enumerate(self.train_cols_name):
                 f.write('{0}\t{1}\tq\n'.format(i, feat))
 
-
     def conformity_test(self):
         """
             xxx
@@ -243,8 +234,10 @@ class GenerateWrapper:
         path = join(self.folder_path, "infos.pkl")
         pickle_dump(infos, path)
 
-        path = join(self.folder_path, "y_true.pkl")
+        path = join(self.folder_path, "y.pkl")
         pickle_dump(self.y_true, path)
+
+        ## XXX : WEIGHTS / GROUPS
 
         if self.weights is not None:
             path = '{}/weights.pkl'.format(self.folder_path)
@@ -257,7 +250,7 @@ class GenerateWrapper:
         """
             backup dataset.py in folder model
         """
-        for script_name in ["dataset.py"]:
+        for script_name in ["dataset.py", "parameters.py"]:
             source = join(self.path, "code", script_name)
             destination = join(self.folder_path, script_name)
             copyfile(source, destination)

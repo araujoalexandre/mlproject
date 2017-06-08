@@ -18,7 +18,9 @@ from datetime import datetime
 import numpy as np
 
 from mlproject.utils import pickle_load, pickle_dump
-from mlproject.utils import ProgressTable, print_and_log, init_log
+from mlproject.utils import init_log
+from mlproject.utils import print_and_log
+from mlproject.utils import ProgressTable
 
 
 # ask to add a comment for the batch of model maybe in the parameters files ?
@@ -44,7 +46,7 @@ class TrainWrapper:
 
         # init logger
         if verbose:
-            self.logger = init_log()
+            self.logger = init_log(self.path)
 
         # load data
         self._load_data()
@@ -74,17 +76,14 @@ class TrainWrapper:
     def _startup_message(self):
         """
         """
-        print_and_log('')
-        print_and_log('')
-        print_and_log("Starting")
-        print_and_log(datetime.now().strftime("%Y.%m.%d %H:%M"))
-        print_and_log('')
+        print_and_log(self.logger, "")
+        print_and_log(self.logger, "")
+        print_and_log(self.logger, "Starting")
+        print_and_log(self.logger, datetime.now().strftime("%Y.%m.%d %H:%M"))
+        print_and_log(self.logger, "")
         for model in self.models_wrapper:
-            print_and_log(model.name)
-        print_and_log('')
-
-    def _save_prediction(self, data):
-        pass
+            print_and_log(self.logger, model.name)
+        print_and_log(self.logger, "")
 
     def models_loop(self, save_model=True):
         """
@@ -117,9 +116,6 @@ class TrainWrapper:
                     if hasattr(self, attr):
                         setattr(model, attr, getattr(self, attr))
 
-            model_folder = model.model_folder
-            model_date   = model.date
-
             # stacking
             train_stack = np.zeros((train_shape[0], num_class))
 
@@ -127,27 +123,25 @@ class TrainWrapper:
             self.fitted_models = []
 
             if verbose:
-                print_and_log('')
-                print_and_log(model.name)
-                print_and_log(model) # print model params
-
+                print_and_log(self.logger, '')
+                print_and_log(self.logger, model.name)
+                print_and_log(self.logger, model) # print model params
                 progress = ProgressTable(self.logger)
-                progress.title()
 
             # timer
             start_loop = datetime.now()
             # start training loop
-            for fold, (train_index, cv_index) in enumerate(validation):
+            for fold, (tr_ix, va_ix) in enumerate(validation):
                 
                 # load y, weights, train
-                ytr, ycv = model.load_target()
-                wtr, wcv = model.load_weights()
-                gtr, gcv = model.load_groups()
-                xtr, xcv = model.load_train()
+                ytr, ycv = model.load_target(tr_ix, va_ix)
+                wtr, wcv = model.load_weights(tr_ix, va_ix)
+                gtr, gcv = model.load_groups(tr_ix, va_ix)
+                xtr, xcv = model.load_train(fold)
                 
                 # train
                 start = datetime.now()
-                model.train(xtr, xcv, ytr, ycv)
+                model.train(xtr, xcv, ytr, ycv, fold)
                 end = datetime.now()
                 
                 # make prediction
@@ -161,13 +155,13 @@ class TrainWrapper:
                     ycv_hat = ycv_hat.reshape(-1, 1)
 
                 # evaluating model => XXX load metric
-                tr_error = self.metric(ytr, ytr_hat, weight=wtr, group=gtr)
-                cv_error = self.metric(ycv, ycv_hat, weight=wcv, group=gcv)
+                tr_error = self.metric(ytr, ytr_hat, weights=wtr, groups=gtr)
+                cv_error = self.metric(ycv, ycv_hat, weights=wcv, groups=gcv)
                 scores_tr += [tr_error]
                 scores_cv += [cv_error]
 
                 # filling train stacking dataset
-                train_stack[cv_index, :] = ycv_hat
+                train_stack[va_ix, :] = ycv_hat
 
                 # update progress table
                 progress.score(fold, tr_error, cv_error, start, end)
@@ -176,27 +170,27 @@ class TrainWrapper:
             end_loop = datetime.now()
 
             # compute total score
-            score = self.metric(self.y_train, train_stack, weight=self.weights, 
-                            group=self.groups)
+            model.score = self.metric(self.y_train, train_stack, 
+                    weight=self.weights, group=self.groups)
             mean_tr = np.mean(scores_tr)
             mean_cv = np.mean(scores_cv)
             stats = [np.std(scores_cv), np.var(scores_cv)] 
-            diff = score - np.mean(scores_cv)
+            diff = model.score - np.mean(scores_cv)
 
             if verbose:
                 # print infos
                 progress.score('', mean_tr, mean_cv, start_loop, end_loop)
 
-                print_and_log("score train oof : {:.5f}".format(score))
-                print_and_log(("validation stats :  Std : {:.5f}, "
+                print_and_log(self.logger, "score train oof : {:.5f}".format(model.score))
+                print_and_log(self.logger, ("validation stats :  Std : {:.5f}, "
                                  "Var : {:.5f}").format(*stats))
-                print_and_log("Diff FULL TRAIN  - MEAN CV: {:.5f}".format(diff))
-                print_and_log('')
+                print_and_log(self.logger, "Diff FULL TRAIN  - MEAN CV: {:.5f}".format(diff))
+                print_and_log(self.logger, '')
 
-            self._save_prediction(train_stack)
-            if save_model:
-                # pickle dump to right folder
-                model.get_model
+            pickle_dump(train_stack, model.path)
+            # if save_model:
+            #     # pickle dump to right folder
+            #     model.get_model
 
     def predict_test(self, compute_score=False, submit=True):
         """
@@ -238,8 +232,8 @@ class TrainWrapper:
                     prediction[:, x] = test_stack[:, x::num_class].mean(axis=1)
             else:
                 prediction = test_stack.mean(axis=1)
-            self._save_prediction(train_stack)
+            pickle_dump(test_shape, model.path)
 
             if submit:
                 self.make_submit(self.id_test, prediction, model.path, 
-                    model.name, model.date, score)
+                    model.name, model.date, model.score)
