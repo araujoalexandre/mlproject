@@ -13,30 +13,32 @@ __author__
 
 """
 
-import sys, os
+from os.path import join
 from subprocess import Popen, PIPE, STDOUT
-import datetime
-import numpy as np
 import pandas as pd
 import xgboost as xgb
 
-from .base import Wrapper
-from kaggle.utils.functions import make_directory
+from mlproject.wrapper import BaseWrapper
+from mlproject.utils import make_directory
+
+# XGB with Python Interface
+# XGB with command line
+
+class XGBoostWrapper(BaseWrapper):
 
 
-class XGBoost(Wrapper):
+    def __init__(self, params):        
 
-
-    def __init__(self, params, paths):        
+        # XXX : check all params
 
         self.params_booster = params['booster'].copy()
         self.predict_option = params.get('predict_option')
         self.name = 'XGBoost'
         
-        super(XGBoost, self).__init__(params, paths)
+        super(XGBoostWrapper, self).__init__(params)
 
 
-    def _create_config_file(self, X_train, X_cv):
+    def _create_config_file(self, X_train_path, X_cv_path):
 
         config_path = '{}/config.txt'.format(self.model_folder)
         with open(config_path, 'r') as f:
@@ -46,9 +48,8 @@ class XGBoost(Wrapper):
             f.write('\n')
             for key, value in self.params:
                 f.write("{} = {}\n".format(key, value))
-
-            f.write("data = {}".format(X_train))
-            f.write("eval[cv] = {}".format(X_cv))
+            f.write("data = {}".format(X_train_path))
+            f.write("eval[cv] = {}".format(X_cv_path))
             f.write("save_period = 1")
             f.write("model_dir = {}".format(self.model_folder))
 
@@ -57,7 +58,6 @@ class XGBoost(Wrapper):
         """
             Function to train a model
         """
-
         make_directory(self.model_folder)
 
         self.params_booster['evals'] = [(X_train, 'train'), (X_cv, 'cv')]
@@ -98,11 +98,11 @@ class XGBoost(Wrapper):
             'cover' :
                 the average coverage of the feature when it is used in trees
         """
-        fmap_name = "{}/features.map".format(self.folder_path)
+        fmap_name = join(self.folder_path, "features.map")
 
         weight = self.model.get_score(fmap=fmap_name, importance_type='weight')
-        gain = self.model.get_score(fmap=fmap_name, importance_type='gain')
-        cover = self.model.get_score(fmap=fmap_name, importance_type='cover')
+        gain   = self.model.get_score(fmap=fmap_name, importance_type='gain')
+        cover  = self.model.get_score(fmap=fmap_name, importance_type='cover')
 
         metrics = {
             'weight': weight,

@@ -12,8 +12,8 @@ __author__
     Araujo Alexandre < aaraujo001@gmail.com >
 
 """
-
-import os, datetime
+from os.path import isfile, join
+from datetime import datetime
 
 import xgboost as xgb
 import pandas as pd
@@ -21,29 +21,26 @@ import numpy as np
 
 from sklearn.datasets import load_svmlight_file
 
-from kaggle.utils.functions import make_directory, pickle_load
+from mlproject.utils import make_directory, pickle_load
 
 
-class Wrapper:
+class BaseWrapper:
 
-    def __init__(self, params, paths):
+    def __init__(self, params):
         """
             xxx
         """
-        self.data_path = paths.get('data_path')
-        self.folder_path = paths.get('folder_path')
+        self.date = datetime.now()
+        self.folder_name = "{}_{:%m%d%H%M}".format(self.name, self.date)
+        self.model_folder = join(self.folder_path, self.folder_name)
 
-        self.date = datetime.datetime.now().strftime("%Y.%m.%d_%H.%M")
-        self.folder_name = "{}_{}".format(self.name, self.date)
-        self.model_folder = "{}/{}".format(self.folder_path, self.folder_name)
-
-        self.params = params['params'].copy()
-        self.ext = params['ext']
+        # XXX : check all params
+        self.params = params.pop('params')
+        self.ext = params.pop('ext')
         self.n_jobs = params.get('n_jobs', -1)
 
         self.dataset = 'train'
         self.fold = 0
-
 
     def __str__(self):
         """
@@ -51,8 +48,7 @@ class Wrapper:
         """
         if len(self.params.items()) > 0:
             return str(self.params)
-        else:
-            return ''
+        return ''
 
 
     def _load(self, path):
@@ -78,45 +74,43 @@ class Wrapper:
         """
             Load and return train & cv set from "Fold_X" folder
         """
-        path = '{}/Fold_{}'.format(self.folder_path, self.fold)
-        path_train = '{}/X_train.{}'.format(path, self.ext)
-        path_cv = '{}/X_cv.{}'.format(path, self.ext)
+        fold_folder = 'fold_{}'.format(self.fold)
+        path_train = join(self.folder_path, fold_folder, "X_tr.pkl")
+        path_cv = join(self.folder_path, fold_folder, "X_cv.pkl")
 
+        # XXX : if model with cmdline don't return dataset but path of dataset 
         if self.ext == 'custom':
             return path_train, path_cv
-
         X_train = self._load(path_train)
         X_cv = self._load(path_cv)
-
         return X_train, X_cv
-
 
     def load_target(self):
         """
             Load and return y_train, y_cv from "Fold_X" folder
         """
-        path_train = "{}/Fold_{}/y_train.pkl".format(self.folder_path, self.fold)
-        path_cv = "{}/Fold_{}/y_cv.pkl".format(self.folder_path, self.fold)
+        fold_folder = 'fold_{}'.format(self.fold)
+        path_train = join(self.folder_path, fold_folder, "y_tr.pkl")
+        path_cv = join(self.folder_path, fold_folder, "y_cv.pkl")
         return pickle_load(path_train), pickle_load(path_cv)
-
 
     def load_weights(self):
         """
             if weights exists, load wtrain and wcv
         """
-        path_train = "{}/Fold_{}/w_train.pkl".format(self.folder_path, self.fold)
-        path_cv = "{}/Fold_{}/w_cv.pkl".format(self.folder_path, self.fold)
-        if os.path.isfile(path_train) and os.path.isfile(path_cv):
+        fold_folder = 'fold_{}'.format(self.fold)
+        path_train = join(self.folder_path, fold_folder, "w_tr.pkl")
+        path_cv = join(self.folder_path, fold_folder, "w_cv.pkl")
+        if isfile(path_train) and isfile(path_cv):
             return pickle_load(path_train), pickle_load(path_cv)
         return None, None
-
 
     def load_test(self):
         """
             Load the test dataset from "Test" folder
         """
-        path = "{}/Test/X_test.{}".format(self.folder_path, self.ext)
-        
+        path = join(self.fold_folder, "test", "X_test.{}".formart)        
+        # XXX : if model with cmdline don't return dataset but path of dataset 
         if self.ext == 'custom':
             return path
 

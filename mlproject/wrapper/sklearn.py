@@ -17,11 +17,11 @@ import copy
 import numpy as np
 import pandas as pd
 
-from kaggle.wrapper.base import Wrapper
-from kaggle.utils.functions import load_features_name, make_directory
+from mlproject.wrapper import BaseWrapper
+from mlproject.utils import load_features_name, make_directory
 
 
-class Sklearn(Wrapper):
+class SklearnWrapper(BaseWrapper):
 
 
     def __init__(self, params, paths):
@@ -30,9 +30,7 @@ class Sklearn(Wrapper):
         """
         self.model = params['model']
         self.name = self.model.__class__.__name__
-
-        super(Sklearn, self).__init__(params, paths)
-
+        super(SklearnWrapper, self).__init__(params, paths)
 
     def train(self, X_train, X_cv, y_train, y_cv):
         """
@@ -49,19 +47,13 @@ class Sklearn(Wrapper):
         if hasattr(self.model, 'n_jobs'):
             self.model.set_params(n_jobs=self.n_jobs)
         self.model.fit(X_train, y_train)
-
         make_directory(self.model_folder)
-
         self._features_importance()
-
 
     def predict(self, X, cv=False):
         """
             function to make and return prediction
         """
-        mask = np.isnan(X) | (X == np.inf)
-        X[mask] = -9999
-
         if hasattr(self.model, 'predict_proba'):
             predict = self.model.predict_proba(X)
         else:
@@ -79,8 +71,8 @@ class Sklearn(Wrapper):
             importance = self.model.feature_importances_
 
             df = pd.DataFrame({ 
-                        'features':features_name, 
-                        'fscore':importance,
+                        'features': features_name, 
+                        'fscore': importance,
                     })
 
             df.sort_values(by='fscore', ascending=True, inplace=True)

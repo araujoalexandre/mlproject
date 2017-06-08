@@ -21,39 +21,21 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from .base import Wrapper
-from kaggle.utils.functions import make_directory
+from .base import BaseWrapper
+from mlproject.utils import make_directory
 
 
-class LibFFM(Wrapper):
-
+class LibFFM(BaseWrapper):
 
     def __init__(self, params, paths):
 
+        self.name = 'LibFFM'
+        self.file_ext = 'ffm'
+
         self.application = params.get('application')
-        if self.application == 'regression':
-            self.exec_train = os.environ['LIBFFM_TRAIN_REGRESSION']
-            self.exec_predict = os.environ['LIBFFM_PREDICT_REGRESSION']
-        elif self.application == 'classification':
-            self.exec_train = os.environ['LIBFFM_TRAIN_CLASSIFICATION']
-            self.exec_predict = os.environ['LIBFFM_PREDICT_CLASSIFICATION']
-        elif self.application is None:
-            raise Exception("application [regression, classification] "
-                            "not defined in parameters")
-
-        # self.exec_train = '/home/alexandrearaujo/library/libffm-custom/ffm-train'
-        # self.exec_predict = '/home/alexandrearaujo/library/libffm-custom/ffm-predict'
-
         self.exec_train = '/home/alexandrearaujo/library/libffm/ffm-train'
         self.exec_predict = '/home/alexandrearaujo/library/libffm/ffm-predict'
-
-        # self.exec_train = '/home/alexandrearaujo/library/libffm-linear/ffm_w_linear-train'
-        # self.exec_predict = '/home/alexandrearaujo/library/libffm-custom/ffm_w_linear-predict'
-
-        self.predict_increment = 0
-
-        self.name = 'LibFFM'
-        
+        # self.predict_increment = 0
         super(LibFFM, self).__init__(params, paths)
 
     def _parse_params(self, params):

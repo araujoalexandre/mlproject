@@ -27,6 +27,9 @@ class LightGBM(Wrapper):
 
     def __init__(self, params, paths):
 
+        self.name = 'LightGBM'
+        self.file_ext = 'XXX'
+
         self.params_booster = params.get('booster')
         self.exec_path = os.environ['LIGHTGBM']
         self.name = "LightGBM"
