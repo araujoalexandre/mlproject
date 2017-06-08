@@ -36,16 +36,20 @@ params = ParametersSpace(
     seed = 123456,
 
     # value to fill for nan value in dataset
-    nan_value = -1,
+    missing = -1,
 
     # name of the id features in train and test set
     id_train = 'id',
-    id_test = 'id_test',
+    id_test = 'id',
 
+    # name of the trarget feature in the dataset or path to a pickle file
+    # or a numpy array 
+    # explain about validation 
     target_train = 'target',
-    target_test = 'test_target',
+    target_test = 'target',
 
     weights_train = None,
+    weights_test = None,
 
     group_train = None,
     group_test = None,

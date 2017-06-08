@@ -1,80 +1,72 @@
-"""
-__file__
 
-    parameters.py
+# classification
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import BernoulliNB
+from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import RandomizedLogisticRegression
+from sklearn.linear_model import RidgeClassifier
+from sklearn.linear_model import SGDClassifier
 
-__description__
-
-    This file provides global parameter configurations for the project.
-
-__author__
-
-    Araujo Alexandre < aaraujo001@gmail.com >
-
-"""
-
-import os, copy
-
-from sklearn.ensemble import *
-from sklearn.linear_model import *
-from sklearn.naive_bayes import *
-
-from sklearn.kernel_ridge import KernelRidge
+# Regression
 from sklearn.linear_model import HuberRegressor
 from sklearn.linear_model import ARDRegression
-from sklearn.linear_model import BayesianRidge
-
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import SGDRegressor 
+from sklearn.linear_model import RANSACRegressor
+from sklearn.ensemble import AdaBoostRegressor
+from sklearn.ensemble import BaggingRegressor
+from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neighbors import RadiusNeighborsRegressor
 
-from sklearn.metrics import mean_absolute_error
+from sklearn.linear_model import BayesianRidge
+from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import Hinge
+from sklearn.linear_model import Huber
+from sklearn.linear_model import Lasso
+from sklearn.linear_model import Lars
+from sklearn.linear_model import MultiTaskElasticNet
+from sklearn.kernel_ridge import KernelRidge
 
-from kaggle.wrapper.xgboost import XGBoost
-from kaggle.wrapper.sklearn import Sklearn
-from kaggle.wrapper.lightgbm import LightGBM
-from kaggle.wrapper.liblinear import Liblinear
-from kaggle.wrapper.libffm import LibFFM
 
-import numpy as np
+# Wrapper
+from mlproject.wrapper import LibFFMWrapper
+from mlproject.wrapper import LiblinearWrapper
+from mlproject.wrapper import LightGBMWrapper
+from mlproject.wrapper import SklearnWrapper
+from mlproject.wrapper import XGBoostWrapper
 
-from kaggle.utils.functions import target_transform, pickle_load
+
+
+
 
 
 #################################################
 #####    Parameters space for train file    #####
 #################################################
 
-def get_params():
-
-    paths = {
-        'folder_path': os.getcwd()
-    }
+def get_models_wrapper():
 
     models = []
-
-    
-
-    # max_iter = 1000
-    # ext = 'npz'
-
-    # params = {
-    #     'model': LogisticRegression(),
-    #     'ext': ext,
-    #     'n_jobs': -1,
-    #     'params': {
-    #         'solver': 'sag',
-    #         'max_iter': max_iter,
-    #     }
-    # }
-    # models.append(Sklearn(params, paths))
-
-
 
     #############################################
     #####    Parameter Space for XGBoost    #####
     #############################################
+    """
+        params dict takes a ext, XXX 
+        URL to params
+    """
 
     ext = 'xgb'
+    nthread = 12
     predict_option = 'best_ntree_limit'
     booster = {
         'num_boost_round': 600, 
@@ -88,51 +80,21 @@ def get_params():
         'booster': booster,
         'params': {
             'booster': 'gbtree',
-            'nthread': 12,
+            'nthread': nthread,
             'objective': 'binary:logistic',
             'eval_metric': 'logloss',
             'eta': 0.05,
-            'max_depth': 5,
-            'subsample': 0.5,
-            'colsample_bytree': 0.7,
-            'min_child_weight': 1,
-            # 'scale_pos_weight': 0.445,
-            'scale_pos_weight': 0.339,
-            # 'scale_pos_weight': 0.1976,
             'silent': 1,
         },
     }
-    models.append(XGBoost(params, paths))
-
-    # params = {
-    #     'ext': ext,
-    #     'predict_option': predict_option,
-    #     'booster': booster,
-    #     'params': {
-    #         'booster': 'gbtree',
-    #         'nthread': 11,
-    #         'objective': 'multi:softprob',
-    #         'eval_metric': 'mlogloss',
-    #         'eta': 0.05,
-    #         'max_depth': 20,
-    #         'subsample': 0.9,
-    #         'colsample_bytree': 0.3,
-    #         'min_child_weight': 1,
-    #         'num_class': 3,
-    #         'silent': 1,
-    #     },
-    # }
-    # models.append(XGBoost(params, paths))
-
-
-    # params['booster']['obj'] = logregobj
-    # models.append(XGBoost(params, paths))
-
+    models += [XGBoostWrapper(params)]
 
     ###############################################
     #####    Parameters space for LightGBM    #####
     ###############################################
-
+    """
+        XXX
+    """
     
     # ext = 'libsvm'
 
@@ -146,25 +108,20 @@ def get_params():
     #         'num_iterations': 20000,
     #         'early_stopping_round': 30,
     #         'metric': 'l2',
-
     #         'max_depth': 13,
     #         'feature_fraction': 1,
-    #         # 'min_data_in_leaf': 320,
-    #         # 'min_gain_to_split': 0,
     #         'lambda_l1': 1.7,
-    #         # 'lambda_l2': 1.6,
-    #         # 'bagging_freq': 1, 
-    #         # 'num_leaves': 105, 
-    #         # 'bagging_fraction': 1, 
-    #         # 'min_sum_hessian_in_leaf': 10
     #     },
     # }
-    # models.append(LightGBM(params, paths))
+    # models += [LightgbmWrapper(params)]
 
 
     ##################################################################
-    #####    Parameter Space for Scikit Learn Ensemble Models    #####
+    #####    Parameter Space for Scikit-Learn Ensemble Models    #####
     ##################################################################
+    """
+        XXX
+    """
 
     n_estimators = 1000
     n_jobs = 12
@@ -227,11 +184,10 @@ def get_params():
     # params = {
     #     'model': LogisticRegression(),
     #     'ext': ext,
-    #     'n_jobs': -1,
     #     'params': {
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [Sklearn(params, paths)]
 
 
     # params = {
@@ -241,7 +197,7 @@ def get_params():
     #         'max_iter': max_iter,
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [Sklearn(params, paths)]
 
     # params = {
     #     'model': KernelRidge(),
@@ -419,16 +375,6 @@ def get_params():
     #     }
     # }
     # models.append(LibFFM(params, paths))
-
-    #####################################################
-    #####    Parameters space for neural network    #####
-    #####################################################
-
-    # params = {
-    #     'type':'neural_network',
-    #     'params': {
-    #     }
-    # }
 
     return models
 

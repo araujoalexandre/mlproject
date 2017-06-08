@@ -28,20 +28,6 @@ from kaggle.utils.functions import target_transform
 from parameters import get_params
 
 
-def metric(y_true, y_hat, groups=None, weight=None):
-    """
-        metric for evaluation
-    """
-    return log_loss(y_true, y_hat, sample_weight=weight)
-
-
-def custom_submit(id_test, preds, args):
-    """
-        Function to create sumbit file for Kaggle competition
-    """
-    df_submit = pd.DataFrame({'test_id':id_test, 'is_duplicate': preds})
-    file_name = "{}/submit_{}_{}_{:.5f}_0.00000.csv.gz".format(*args)
-    df_submit.to_csv(file_name, index=False, compression='gzip')
 
 
 def init_log():
