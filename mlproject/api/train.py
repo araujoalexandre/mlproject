@@ -12,36 +12,13 @@ __author__
     Araujo Alexandre < alexandre.araujo@wavestone.fr >
 
 """
-
-from logging import getLogger, basicConfig, INFO
+from os.path import join, exists
 from datetime import datetime
-import os, sys, glob, pickle
 
 import numpy as np
-import pandas as pd
 
-from sklearn.metrics import log_loss, roc_auc_score
-
-from kaggle.utils.functions import pickle_dump, pickle_load
-from kaggle.utils.functions import CustomPrint, make_submit
-from kaggle.utils.functions import target_transform
-from parameters import get_params
-
-
-def metric(y_true, y_hat, groups=None, weight=None):
-    """
-        custom metric for evaluation
-    """
-    return log_loss(y_true, y_hat, sample_weight=weight)
-
-
-def custom_submit(id_test, preds, *args, **kwargs):
-    """
-        Function to create sumbit file for Kaggle competition
-    """
-    df_submit = pd.DataFrame({'test_id':id_test, 'is_duplicate': preds})
-    file_name = "{}/submit_{}_{}_{:.5f}_0.00000.csv.gz".format(*args)
-    df_submit.to_csv(file_name, index=False, compression='gzip')
+from mlproject.utils import pickle_load, pickle_dump
+from mlproject.utils import ProgressTable, print_and_log, init_log
 
 
 # ask to add a comment for the batch of model maybe in the parameters files ?
@@ -50,194 +27,219 @@ def custom_submit(id_test, preds, *args, **kwargs):
 # save features importance in his own folder
 
 
-# class TrainWrapper:
-#     XXX
+class TrainWrapper:
 
-    
+    def __init__(self, path, models_wrapper, metric, make_submit, verbose=True):
 
-def main():
-    
-    ######################
-    #####    INIT    #####
-    ######################
-    
-    models_to_run = get_params()
-    do_submit = True
+        # path of the model folder
+        self.path = path
+        # list of all the Wrappers with initilized with parameters
+        self.models_wrapper = models_wrapper
+        # function to compute the score
+        self.metric = metric
+        # function to make submission file for Data Science Competi
+        self.make_submit = make_submit
+        # print informations and progression table
+        self.verbose = verbose
 
-    logger = init_log()
-    print_ = CustomPrint(logger)
+        # init logger
+        if verbose:
+            self.logger = init_log()
 
-    print_.to_print('')
-    print_.to_print('')
-    print_.to_print("Starting")
-    print_.to_print(datetime.now().strftime("%Y.%m.%d %H:%M"))
-    print_.to_print('')
+        # load data
+        self._load_data()
 
-    for model in models_to_run:
-        print_.to_print(model.name)
-    print_.to_print('')
+    def _load_data(self):
+        """
+            function to load important data files : 
+                id [train/test]
+                y  [train/test]
+                weights [train/test]
+                groups [train/test]
+        """
+        self.infos = pickle_load(join(self.path, "infos.pkl"))
+        self.train_shape = self.infos.get("train_shape")
+        self.test_shape = self.infos.get("test_shape")
 
-    #######################
-    #####    INFOS    #####
-    #######################
+        for dataset in ["train", "test"]:
+            if dataset == "test" and self.test_shape is (None, None): 
+                continue
+            for file in ["id", "y", "weights", "groups"]:
+                filename = '_'.join([file, dataset])
+                file_path = join(self.path, filename)
+                if exists(file_path):
+                    setattr(self, filename, pickle_load(file_path))
+        self.validation = pickle_load(join(self.path, "validation.pkl"))
 
-    folder = os.path.split(os.path.realpath(__file__))[0]
-    infos = pickle_load('{}/infos.pkl'.format(folder))
-    
-    n_folds = infos.get('n_folds')
-    train_shape = infos.get('train_shape')
-    test_shape = infos.get('test_shape')
-    folder_path = infos.get('folder_path')
-    data_path = infos.get('data_path')
+    def _startup_message(self):
+        """
+        """
+        print_and_log('')
+        print_and_log('')
+        print_and_log("Starting")
+        print_and_log(datetime.now().strftime("%Y.%m.%d %H:%M"))
+        print_and_log('')
+        for model in self.models_wrapper:
+            print_and_log(model.name)
+        print_and_log('')
 
-    ######################
-    #####    LOAD    #####
-    ######################
-    
-    if test_shape is not None:
-        id_test = pickle_load("{}/id_test.pkl".format(folder_path))
-    y_true = pickle_load("{}/y_true.pkl".format(folder_path))
+    def _save_prediction(self, data):
+        pass
 
-    if os.path.exists("{}/weights.pkl".format(folder_path)):
-        weights = pickle_load("{}/weights.pkl".format(folder_path))
-    skf = pickle_load("{}/skf.pkl".format(folder_path))
+    def models_loop(self, save_model=True):
+        """
+            training loop 
+        """
+        verbose = self.verbose
+        train_shape = self.train_shape
+        validation = self.validation
+        nfolds = len(validation)
 
-    ########################
-    #####    MODELS    #####
-    ########################
-    
-    for enum, model in enumerate(models_to_run):
+        # print startup message 
+        if verbose:
+            self._startup_message()
 
-        model.name = "{}_{}".format(model.name, enum)
-        model.model_folder = "{}_{}".format(model.model_folder, enum)
+        for enum, model in enumerate(self.models_wrapper):
 
-        model_name = model.name
-        model_folder = model.model_folder
-        model_date = model.date
+            num_class = 1
+            # override num_class
+            if model.task == 'multiclass':
+                num_class = len(set(self.y_train))
 
-        model.dataset = 'train'
-
-        num_class = 1
-
-        # stacking
-        X_stack_train = np.zeros((train_shape[0], num_class))
-        if test_shape is not None:
-            X_stack_test = np.zeros((test_shape[0], n_folds*num_class))
-
-        RESULTS = {}
-        scores_train = []
-        scores_cv = []
-
-        print_.to_print('')
-        print_.to_print(model_name)
-        print_.to_print(model)
-        print_.title()
-        
-        start_0 = datetime.now()
-        for fold, (train_index, cv_index) in enumerate(skf):
+            model.name    = "{}_{}".format(model.name, enum)
+            model.folder  = "{}_{}".format(model.folder, enum)
             
-            start = datetime.now()
+            for dataset in ["train", "test"]:
+                if dataset == "test" and self.test_shape is (None, None): 
+                    continue
+                for attr_type in ["y", "weights", "group"]:
+                    attr = '_'.join([attr_type, dataset])
+                    if hasattr(self, attr):
+                        setattr(model, attr, getattr(self, attr))
+
+            model_folder = model.model_folder
+            model_date   = model.date
+
+            # stacking
+            train_stack = np.zeros((train_shape[0], num_class))
+
+            scores_tr, scores_cv = [], []
+            self.fitted_models = []
+
+            if verbose:
+                print_and_log('')
+                print_and_log(model.name)
+                print_and_log(model) # print model params
+
+                progress = ProgressTable(self.logger)
+                progress.title()
+
+            # timer
+            start_loop = datetime.now()
+            # start training loop
+            for fold, (train_index, cv_index) in enumerate(validation):
+                
+                # load y, weights, train
+                ytr, ycv = model.load_target()
+                wtr, wcv = model.load_weights()
+                gtr, gcv = model.load_groups()
+                xtr, xcv = model.load_train()
+                
+                # train
+                start = datetime.now()
+                model.train(xtr, xcv, ytr, ycv)
+                end = datetime.now()
+                
+                # make prediction
+                ytr_hat = model.predict(xtr)
+                ycv_hat = model.predict(xcv)
+
+                # process dim y_hat
+                if ytr_hat.ndim == 1:
+                    ytr_hat = ytr_hat.reshape(-1, 1)
+                if ycv_hat.ndim == 1:
+                    ycv_hat = ycv_hat.reshape(-1, 1)
+
+                # evaluating model => XXX load metric
+                tr_error = self.metric(ytr, ytr_hat, weight=wtr, group=gtr)
+                cv_error = self.metric(ycv, ycv_hat, weight=wcv, group=gcv)
+                scores_tr += [tr_error]
+                scores_cv += [cv_error]
+
+                # filling train stacking dataset
+                train_stack[cv_index, :] = ycv_hat
+
+                # update progress table
+                progress.score(fold, tr_error, cv_error, start, end)
+
+            # timer
+            end_loop = datetime.now()
+
+            # compute total score
+            score = self.metric(self.y_train, train_stack, weight=self.weights, 
+                            group=self.groups)
+            mean_tr = np.mean(scores_tr)
+            mean_cv = np.mean(scores_cv)
+            stats = [np.std(scores_cv), np.var(scores_cv)] 
+            diff = score - np.mean(scores_cv)
+
+            if verbose:
+                # print infos
+                progress.score('', mean_tr, mean_cv, start_loop, end_loop)
+
+                print_and_log("score train oof : {:.5f}".format(score))
+                print_and_log(("validation stats :  Std : {:.5f}, "
+                                 "Var : {:.5f}").format(*stats))
+                print_and_log("Diff FULL TRAIN  - MEAN CV: {:.5f}".format(diff))
+                print_and_log('')
+
+            self._save_prediction(train_stack)
+            if save_model:
+                # pickle dump to right folder
+                model.get_model
+
+    def predict_test(self, compute_score=False, submit=True):
+        """
+        """
+        test_shape = self.test_shape
+        nfolds = len(self.fitted_models)
+        for enum, model in enumerate(self.models_wrapper):
             
-            model.fold = fold
+            # load test set
+            xtest = model.load_test()
 
-            # load y, weights, train
-            y_train, y_cv = model.load_target()
-            w_train, w_cv = model.load_weights()
-            X_train, X_cv = model.load_train()
+            # check task 
+            multiclass = True if model.task == 'multiclass' else False
+            if multiclass:
+                num_class = len(set(self.y_train))
 
-            # train
-            model.train(X_train, X_cv, y_train, y_cv)
+            # init test_stack
+            test_stack = np.zeros((test_shape[0], nfolds*num_class))
 
-            end = datetime.now()
+            for fold in range(nfolds):
 
-            # make prediction
-            predict_train = model.predict(X_train)
-            predict_cv = model.predict(X_cv, cv=True)
+                # evaluating model
+                y_hat = model.predict(xtest)
 
-            # if num_class == 1, reshape dim
-            if num_class <= 1:
-                predict_train = predict_train.reshape(-1, 1)
-                predict_cv = predict_cv.reshape(-1, 1)
+                # process dim y_hat
+                if y_hat.ndim == 1:
+                    y_hat = y_hat.reshape(-1, 1)
 
-            # filling train stacking dataset
-            X_stack_train[cv_index, :] = predict_cv
+                # filling test stacking dataset
+                if multiclass:
+                    index = np.array(list(range(num_class)))
+                    test_stack[:, index + fold*num_class] = y_hat
+                else:
+                    test_stack[:, fold] = y_hat
 
-            # evaluating model
-            train_error = metric(y_train, predict_train, weight=w_train)
-            cv_error = metric(y_cv, predict_cv, weight=w_cv)
-            scores_train.append(train_error)
-            scores_cv.append(cv_error)
-
-            print_.score(fold, train_error, cv_error, start, end)
-
-            RESULTS[fold] = {
-                'model': model.get_model,
-                'index': [train_index, cv_index],
-                'proba': [predict_train, predict_cv],
-                'error': [train_error, cv_error],
-            }
-
-        end_0 = datetime.now()
-        score = metric(y_true, X_stack_train, weight=weights)
-        mean_train = np.mean(scores_train)
-        mean_cv = np.mean(scores_cv)
-        stats = [np.std(scores_cv), np.var(scores_cv)] 
-        diff = score - np.mean(scores_cv)
-
-        # print infos
-        print_.line()
-        print_.score('', mean_train, mean_cv, start_0, end_0)
-        print_.line()
-
-        print_.to_print("SCORE FULL TRAIN : {:.5f}".format(score))
-        print_.to_print(("CV STATS :  Std : {:.5f}, "
-                         "Var : {:.5f}").format(*stats))
-        print_.to_print("Diff FULL TRAIN  - MEAN CV: {:.5f}".format(diff))
-        print_.to_print('')
-
-        RESULTS['train_stack_error'] = score
-        RESULTS['train_stack'] = X_stack_train
-
-        #####################################
-        #####    PREDICTIONS ON TEST    #####
-        #####################################
-
-        X_test = model.load_test()
-
-        for fold in range(n_folds):
-            model_test = RESULTS[fold]['model']
-
-            # evaluating model
-            if 'xgboost' in str(model_test):
-                ntree_limit = model_test.best_ntree_limit
-                predict_test = model_test.predict(X_test, ntree_limit=ntree_limit)
+            if multiclass:
+                prediction = np.zeros((test_shape[0], num_class))
+                for x in range(num_class):
+                    prediction[:, x] = test_stack[:, x::num_class].mean(axis=1)
             else:
-                predict_test = model_test.predict_proba(X_test)
+                prediction = test_stack.mean(axis=1)
+            self._save_prediction(train_stack)
 
-            # filling test stacking dataset
-            if num_class <= 1:
-                X_stack_test[:, fold] = predict_test
-            else:
-                index = np.array(list(range(num_class)))
-                X_stack_test[:, index + fold*num_class] = predict_test
-        
-        # averaging folds
-        if num_class <= 1:
-            prediction = np.mean(X_stack_test, axis=1)
-        else:            
-            prediction = np.zeros((test_shape[0], num_class))
-            for x in range(num_class):
-                prediction[:, x] = X_stack_test[:, x::num_class].mean(axis=1)
-
-        RESULTS['test_stack'] = prediction
-        pickle_dump(RESULTS, "{}/{}_dump.pkl".format(model_folder, model_name))
-
-        if do_submit:
-            args = [folder_path, model_name, model_date, score]
-            custom_submit(id_test, prediction, args)
-    
-    print_.to_print("Done ;)")
-    
-if __name__ == "__main__":
-    main()
-
+            if submit:
+                self.make_submit(self.id_test, prediction, model.path, 
+                    model.name, model.date, score)
