@@ -18,7 +18,6 @@ class Command(MlprojectCommand):
         return "clean up model folder"
 
     def add_options(self, parser):
-
         parser.add_argument("model_dirs", nargs='*', 
                 help="remove dataset from model folder")
         parser.add_argument("--all", action='store_true', 

@@ -2,25 +2,22 @@ from os import getcwd, makedirs
 from os.path import join, exists, basename
 from sys import exit
 from argparse import SUPPRESS
+from time import clock
 
 import mlproject
 from mlproject.commands import MlprojectCommand
 from mlproject.api import GenerateWrapper
 from mlproject.utils import pickle_load
-from mlproject.utils import ProgressTable, print_and_log, init_log
 from mlproject.utils import print_and_log as print_
 from mlproject.utils import current_folder
-from mlproject.utils import Timer
 
 """
     this file use the GenerateWrapper API 
 """
 
-# XXX : print fold X / nb X
 # XXX : Check if dataset got object features
 # XXX : time dataset generation for train and test
 # XXX : print info about nan values
-# XXX : print info about size (Go) of model_folder
 # XXX : possiliboty de run the training after the generation process
 # XXX : option to clean up after succesfull training
 
@@ -89,23 +86,23 @@ class Command(MlprojectCommand):
         """
             save train folds
         """
-        for fold, (tr_index, cv_index) in enumerate(validation):
+        for fold, (tr_ix, va_ix) in enumerate(validation):
 
-            y_tr, y_cv = gen.split_target(tr_index, cv_index)
-            w_tr, w_cv = gen.split_weights(tr_index, cv_index)
-            g_tr, g_cv = gen.split_groups(tr_index, cv_index)
-            x_tr, x_cv = gen.split_data(df_train, tr_index, cv_index)
+            ytr, yva = gen.split_target(tr_ix, va_ix)
+            wtr, wva = gen.split_weights(tr_ix, va_ix)
+            gtr, gva = gen.split_groups(tr_ix, va_ix)
+            xtr, xva = gen.split_data(df_train, tr_ix, va_ix)
 
-            kwtrain = {'y': y_tr, 'weights': w_tr, 'groups': g_tr, 'fold': fold}
-            kwcv = {'y': y_cv,'weights': w_cv,'groups': g_cv,'fold': fold}
+            kwtr = {'y': ytr, 'weights': wtr, 'groups': gtr, 'fold': fold}
+            kwva = {'y': yva, 'weights': wva, 'groups': gva, 'fold': fold}
 
             for ext in self.extensions:
-                gen.dump(x_tr, ext, 'train', **kwtrain)
-                gen.dump(x_cv, ext, 'cv', **kwcv)
+                gen.dump(xtr, ext, 'tr', **kwtr)
+                gen.dump(xva, ext, 'va', **kwva)
 
             message = ('Fold {}/{}\tTrain shape\t[{}|{}]\tCV shape\t[{}|{}]')
-            args = [fold+1, len(validation), *x_tr.shape, *x_cv.shape]
-            print_(self.logger, message.format(*args))
+            print_(self.logger, message.format(fold+1, len(validation), 
+                                                    *xtr.shape, *xva.shape))
 
     def _save_test(self, gen, df_test):
         """
@@ -137,8 +134,6 @@ class Command(MlprojectCommand):
 
         # XXX no need => only for training step
         # # init pprint class
-        # self.progess = ProgressTable(self.gen.log)
-
 
         # try to load the target 
         gen.y_true = self._try_load_target(params.target_train)
@@ -147,10 +142,11 @@ class Command(MlprojectCommand):
             gen.validation = self.validation_splits(params.n_folds, gen.y_true)            
 
         # Generate df_train & df_test
-        print_(self.logger, '\nMaking train/test dataset')
-        with Timer() as t:
-            df_train, df_test = self.create_dataset(gen.validation)
-        print_(self.logger, 'train/test set done in {:.0}'.format(t.interval))
+        print_(self.logger, '\ncreating train/test dataset')
+        start = clock()
+        df_train, df_test = self.create_dataset(gen.validation)
+        end = clock()
+        print_(self.logger, 'train/test set done in {:.0}'.format(end - start))
 
         if not gen.y_true:
             # extract target features

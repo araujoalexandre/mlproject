@@ -3,7 +3,7 @@ Base class for mlproject commands
 """
 from mlproject.utils import inside_project
 
-class MlprojectCommand(object):
+class MlprojectCommand:
 
     def syntax(self):
         """
