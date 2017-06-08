@@ -37,7 +37,7 @@ class Command(MlprojectCommand):
     def add_options(self, parser):
 
         choices = ['xgb', 'npz', 'libsvm', 'pkl', 'libffm', 'custom']
-        parser.add_argument(dest='types', choices=choices, nargs='+',
+        parser.add_argument(dest='extensions', choices=choices, nargs='+',
                             help='Dataset type(s) to generate') 
         parser.add_argument("--train", dest="train", action="store_true",
                         help="run training after generation")
@@ -60,7 +60,7 @@ class Command(MlprojectCommand):
         """
             convert args from argsparse as class attributes
         """
-        self.types = args.types
+        self.extensions = args.extensions
 
     def _try_load_target(self, path):
         """
@@ -96,12 +96,12 @@ class Command(MlprojectCommand):
             g_tr, g_cv = gen.split_groups(tr_index, cv_index)
             x_tr, x_cv = gen.split_data(df_train, tr_index, cv_index)
 
-            kwtrain = {'y': y_tr, 'weight': w_tr, 'group': g_tr, 'fold': fold}
-            kwcv = {'y': y_cv,'weight': w_cv,'group': g_cv,'fold': fold}
+            kwtrain = {'y': y_tr, 'weights': w_tr, 'groups': g_tr, 'fold': fold}
+            kwcv = {'y': y_cv,'weights': w_cv,'groups': g_cv,'fold': fold}
 
-            for type_ in self.types:
-                gen.dump(x_tr, type_, 'train', **kwtrain)
-                gen.dump(x_cv, type_, 'cv', **kwcv)
+            for ext in self.extensions:
+                gen.dump(x_tr, ext, 'train', **kwtrain)
+                gen.dump(x_cv, ext, 'cv', **kwcv)
 
             message = ('Fold {}/{}\tTrain shape\t[{}|{}]\tCV shape\t[{}|{}]')
             args = [fold+1, len(validation), *x_tr.shape, *x_cv.shape]
@@ -114,8 +114,8 @@ class Command(MlprojectCommand):
         # XXX : add target if exists
         # XXX : add weights if exists
         # XXX : add group if exists
-        for type_ in self.types:
-            gen.dump(df_test, type_, 'test')
+        for ext in self.extensions:
+            gen.dump(df_test, ext, 'test')
         print_(self.logger, '\t\tTest shape\t[{}|{}]'.format(*df_test.shape))
 
     def run(self, args):

@@ -1,7 +1,7 @@
 """
 __file__
 
-    GenerateWrapper.py
+    api/generate.py
 
 __description__
 
@@ -19,28 +19,11 @@ from datetime import datetime
 
 import numpy as np
 
-try:
-    from pandas import DataFrame
-    PANDAS_INSTALLED = True
-except ImportError:
-    PANDAS_INSTALLED = False
-
-try:
-    from xgboost import DMatrix
-    XGBOOST_INSTALLED = True
-except ImportError:
-    XGBOOST_INSTALLED = False
-
-try:
-    from sklearn.datasets import dump_svmlight_file
-    SKLEARN_INSTALLED = True
-except ImportError:
-    SKLEARN_INSTALLED = False
-
 from mlproject.utils import is_pandas, is_numpy
 from mlproject.utils import print_and_log, init_log
 from mlproject.utils import pickle_load, pickle_dump
 from mlproject.utils import make_directory
+from mlproject.utils import get_ext_cls
 
 
 # XXX : get and save the shapes of train and test files in project folder ??
@@ -137,71 +120,12 @@ class GenerateWrapper:
 
         return df.loc[tr_index].values, df.loc[cv_index].values
 
-    def _save_xgb(self, X, y, weight, group, path):
-        """
-            function to convert and save : XGBoost format
-        """
-        if not XGBOOST_INSTALLED:
-            raise Exception('Package XGBoost needs to be installed')
-        weight = weight if weight else None
-        dxgb = DMatrix(X, y, missing=self.params.missing, weight=weight)
-        dxgb.save_binary(path)
-
-    def _save_pkl(self, X, y, weight, group, path):
-        """
-            function to convert and save : pickle format
-        """
-        pickle_dump(X, path)
-
-    def _save_csv(self, X, y, weight, group, path):
-        """
-            function 
-        """
-        raise NotImplementedError
-
-    def _save_npz(self, X, y, weight, group, path):
-        """
-            function to convert and save : compressed numpy format
-        """
-        np.savez_compressed(path, X)
-
-    def _save_libsvm(self, X, y, weight, group, path):
-        """
-            function to convert and save : libsvm format
-            format :
-                <label> <index>:<value> <index>:<value>
-        """
-        if not SKLEARN_INSTALLED:
-            raise Exception('Package Scikit-Learn needs to be installed')    
-        if y is None: y = np.zeros(len(X))
-        dump_svmlight_file(X, y, path)
-
-    def _save_libffm(self, X, y, weight, group, path):
-        """
-            function to convert and save : libffm format
-            format :
-                <label> <field>:<index>:<value> <field>:<index>:<value>
-        """
-        if y is None: y = np.zeros(len(X))
-        if PANDAS_INSTALLED and isinstance(X, DataFrame):
-            X = X.values
-
-        # convert all to int ? what about NaN value ?
-        X = np.array(X, dtype=np.int)
-        with open(path, 'w') as f:
-            for i, line in enumerate(X):
-                out = str('{} '.format(int(y[i])))
-                for col_index, value in enumerate(line):
-                    out += '{}:{}:1 '.format(abs(int(col_index)), abs(int(value)))
-                out += '\n'
-                f.write(out)
-
-    def dump(self, X, type_, name, y=None, weight=None, group=None, fold=None):
+    def dump(self, X, ext, name, y=None, weights=None, groups=None, fold=None):
         """
             save X, y and weights in the right format
         """
         assert is_pandas(X) or is_numpy(X), "dataset need to be Pandas "\
-                                            "DataFrame or NumPy array"
+                                                "DataFrame or NumPy array"
         assert name in ['train', 'cv', 'test'], 'name not recognized'
 
         if fold is not None:
@@ -220,21 +144,14 @@ class GenerateWrapper:
 
         # save w_train, w_cv => is it necessary ? 
         w_path = join(path, 'w_{}.pkl'.format(name))
-        if weight is not None and not isfile(w_path):
-            pickle_dump(weight, w_path)
+        if weights is not None and not isfile(w_path):
+            pickle_dump(weights, w_path)
 
-        X_path = join(path, 'X_{}.{}'.format(name, type_))
-        # switch 
-        {
-            'xgb':    self._save_xgb,
-            'pkl':    self._save_pkl,
-            'npz':    self._save_npz,
-            'libsvm': self._save_libsvm,
-            'libffm': self._save_libffm,
-            'csv':    self._save_csv,
-            # 'custom': self._save_custom,
-
-        }[type_](X, y, weight, group, X_path)
+        path = join(path, 'X_{}.{}'.format(name, ext))
+        cls = get_ext_cls()[ext]
+        cls.save(path, X, y, weights=weights, 
+                             groups=groups, 
+                             missing=self.params.missing)
 
     def cleaning(self, df):
         """
