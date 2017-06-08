@@ -1,18 +1,3 @@
-"""
-__file__
-
-    libffm.py
-
-__description__
-
-    Wrapper for libFFM library 
-    https://www.csie.ntu.edu.tw/~cjlin/libffm/
-    
-__author__
-
-    Araujo Alexandre < aaraujo001@gmail.com >
-
-"""
 
 import sys, os, copy
 import multiprocessing
@@ -25,7 +10,7 @@ from .base import BaseWrapper
 from mlproject.utils import make_directory
 
 
-class LibFFM(BaseWrapper):
+class LibFFMWrapper(BaseWrapper):
 
     def __init__(self, params, paths):
 
@@ -36,7 +21,7 @@ class LibFFM(BaseWrapper):
         self.exec_train = '/home/alexandrearaujo/library/libffm/ffm-train'
         self.exec_predict = '/home/alexandrearaujo/library/libffm/ffm-predict'
         # self.predict_increment = 0
-        super(LibFFM, self).__init__(params, paths)
+        super(LibFFMWrapper, self).__init__(params, paths)
 
     def _parse_params(self, params):
         """

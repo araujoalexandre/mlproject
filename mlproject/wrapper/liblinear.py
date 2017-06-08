@@ -1,39 +1,25 @@
-"""
-__file__
-
-    liblinear.py
-
-__description__
-
-    Liblinear wrapper
-    
-__author__
-
-    Araujo Alexandre < aaraujo001@gmail.com >
-
-"""
 
 import multiprocessing, copy
 import liblinear
 import liblinearutil as ll
-from .base import Wrapper
+from .base import BaseWrapper
 from kaggle.utils.functions import make_directory
 
 
-class Liblinear(Wrapper):
+class LiblinearWrapper(BaseWrapper):
 
 
     def __init__(self, params, folder_path):
 
         self.name = 'Liblinear'
+        self.file_ext = 'fm'
 
         if params.get('type_solver') in [0,1,2,3,4,5,6,7]:
             self.application = 'classifiction'
         else:
             self.application = 'regression'
 
-        super(Liblinear, self).__init__(params, folder_path)
-
+        super(LiblinearWrapper, self).__init__(params, folder_path)
 
     def _parse_params(self, params):
         """
@@ -63,7 +49,6 @@ class Liblinear(Wrapper):
 
         return ' '.join(arr)
 
-
     def train(self, X_train, X_cv, y_train, y_cv):
         """
             Function to train a model
@@ -72,7 +57,6 @@ class Liblinear(Wrapper):
         self.model = ll.train(y_train.tolist(), X_train.tolist(), config)
 
         make_directory(self.model_folder)
-
 
     def predict(self, X, cv=False):
         """
@@ -90,7 +74,6 @@ class Liblinear(Wrapper):
             predict = ll.predict(y, X.tolist(), self.model, config)[0]
 
         return predict
-
 
     @property
     def get_model(self):

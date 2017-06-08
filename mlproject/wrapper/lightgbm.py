@@ -1,29 +1,14 @@
-"""
-__file__
-
-    lightgbm.py
-
-__description__
-
-    Microsoft LightGBM Wrapper
-    https://github.com/Microsoft/LightGBM
-    
-__author__
-
-    Araujo Alexandre < aaraujo001@gmail.com >
-
-"""
 
 import os, re, copy
 from subprocess import Popen, PIPE
 import numpy as np
 import pandas as pd
 
-from .base import Wrapper
-from kaggle.utils.functions import load_features_name, make_directory
+from .base import BaseWrapper
+from mlproject.utils import load_features_name, make_directory
 
 
-class LightGBM(Wrapper):
+class LightGBMWrapper(BaseWrapper):
 
     def __init__(self, params, paths):
 
@@ -36,17 +21,17 @@ class LightGBM(Wrapper):
         self.verbose = params['params'].get('verbose')
         self.predict_increment = 0
 
-        super(LightGBM, self).__init__(params, paths)
+        super(LightGBMWrapper, self).__init__(params, paths)
 
 
-    def train(self, X_train, X_cv, y_train, y_cv):
+    def train(self, X_train, X_cv, y_train, y_cv, fold):
         """
             xxx
         """
 
         make_directory(self.model_folder)
 
-        args = [self.folder_path, self.fold]
+        args = [self.folder_path, fold]
         train_path = "{}/Fold_{}/X_train.libsvm".format(*args)
         cv_path = "{}/Fold_{}/X_cv.libsvm".format(*args)
 

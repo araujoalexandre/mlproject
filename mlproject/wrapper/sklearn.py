@@ -1,23 +1,10 @@
-"""
-__file__
 
-    sklearn.py
-
-__description__
-
-    Scikit-Learn algorithms wrapper
-    
-__author__
-
-    Araujo Alexandre < aaraujo001@gmail.com >
-
-"""
 import copy
 
 import numpy as np
 import pandas as pd
 
-from mlproject.wrapper import BaseWrapper
+from .base import BaseWrapper
 from mlproject.utils import load_features_name, make_directory
 
 
@@ -32,17 +19,10 @@ class SklearnWrapper(BaseWrapper):
         self.name = self.model.__class__.__name__
         super(SklearnWrapper, self).__init__(params, paths)
 
-    def train(self, X_train, X_cv, y_train, y_cv):
+    def train(self, X_train, X_cv, y_train, y_cv, fold):
         """
             Function to train a model
         """
-
-        mask = np.isnan(X_train) | (X_train == np.inf)
-        X_train[mask] = -9999
-
-        mask = np.isnan(X_cv) | (X_cv == np.inf)
-        X_cv[mask] = -9999
-
         self.model.set_params(**self.params)      
         if hasattr(self.model, 'n_jobs'):
             self.model.set_params(n_jobs=self.n_jobs)
