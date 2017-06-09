@@ -118,7 +118,6 @@ class GenerateWrapper:
         """
         assert is_pandas(X) or is_numpy(X), "dataset need to be Pandas "\
                                                 "DataFrame or NumPy array"
-        assert name in ['train', 'cv', 'test'], 'name not recognized'
 
         if fold is not None:
             dump_folder = 'fold_{}'.format(fold)
@@ -128,16 +127,6 @@ class GenerateWrapper:
         # create fold_* or test folder
         path = join(self.folder_path, dump_folder)
         make_directory(path)
-
-        # # save y_train, y_cv => is it necessary ? 
-        # y_path = join(path, 'y_{}.pkl'.format(name))
-        # if y is not None and not isfile(y_path):
-        #     pickle_dump(y, y_path)
-
-        # # save w_train, w_cv => is it necessary ? 
-        # w_path = join(path, 'w_{}.pkl'.format(name))
-        # if weights is not None and not isfile(w_path):
-        #     pickle_dump(weights, w_path)
 
         path = join(path, 'X_{}.{}'.format(name, ext))
         cls = get_ext_cls()[ext]

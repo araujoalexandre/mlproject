@@ -47,7 +47,7 @@ class CmdlineTests(unittest.TestCase):
             self.assertTrue(len(folders))
 
             path = join(path, "models", folders[0])
-            gen = product(range(5), extensions, ['train', 'cv'])
+            gen = product(range(5), extensions, ['tr', 'va'])
             for fold, ext, set_ in gen:
                 self.assertTrue(exists(join(path, "fold_{}".format(fold), 
                     "X_{}.{}".format(set_, ext))))
