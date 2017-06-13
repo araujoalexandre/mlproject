@@ -10,22 +10,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import KFold
-from sklearn.model_selection import GroupKFold
-
-# regression task
-from sklearn.metrics import f1_score
-from sklearn.metrics import r2_score
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import median_absolute_error
-
-# classification task
 from sklearn.metrics import log_loss
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import matthews_corrcoef
-from sklearn.metrics import average_precision_score
 
 load = [ 'define_params', 'create_dataset', 'validation_splits', 'metric',
     'make_submit', 'target_preprocess', 'target_postprocess' ]
@@ -43,33 +28,14 @@ def define_params():
         # path to the project and to the data folder
         project_path = project_path(getcwd()),
         data_path = join(project_path(getcwd()), 'data'),
-        
-        # names of dataset
-        # the function will generate train_path and test_path attributes
-        train_name = 'train.csv',
-        test_name = 'test.csv',
 
-        # seed value for the project
         seed = 123456,
 
-        # value to fill for nan value in dataset
-        missing = -1,
-
-        # name of the id features in train and test set
         id_train = 'id',
         id_test = 'id',
 
-        # name of the traget feature in the dataset or path to a pickle file
-        # or a numpy array 
-        # explain about validation
         target_train = 'target',
         target_test = 'target',
-
-        weights_train = None,
-        weights_test = None,
-
-        group_train = None,
-        group_test = None,
 
         n_folds = 5,
     )
