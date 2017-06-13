@@ -106,8 +106,8 @@ class BaseWrapper:
             Load and return train & cv set from "Fold_X" folder
         """
         fold_folder = "fold_{}".format(fold)
-        path_tr = join(self.path, fold_folder, "X_train.{}".format(self.ext))
-        path_va = join(self.path, fold_folder, "X_cv.{}".format(self.ext))
+        path_tr = join(self.path, fold_folder, "X_tr.{}".format(self.ext))
+        path_va = join(self.path, fold_folder, "X_va.{}".format(self.ext))
         xtr = self._load_data_ext(path_tr)
         xva = self._load_data_ext(path_va)
         return xtr, xva
@@ -116,7 +116,7 @@ class BaseWrapper:
         """
             Load the test dataset from "Test" folder
         """
-        path = join(self.fold_folder, "test", "X_test.{}".format(self.ext))
+        path = join(self.path, "test", "X_test.{}".format(self.ext))
         # XXX : if model with cmdline don't return dataset but path of dataset 
         if self.ext == 'custom':
             return path
