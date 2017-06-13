@@ -239,7 +239,8 @@ class GenerateWrapper:
         """
             backup dataset.py in folder model
         """
-        for script_name in ["dataset.py", "parameters.py"]:
+        # XXX load thoses files dynamically
+        for script_name in ["project.py", "parameters.py"]:
             source = join(self.path, "code", script_name)
             destination = join(self.folder_path, script_name)
             copyfile(source, destination)
