@@ -3,43 +3,30 @@ from os.path import join, exists, abspath
 from sys import exit
 from datetime import datetime
 from pkgutil import get_data
-from argparse import SUPPRESS
 
-import mlproject
 from mlproject.commands import MlprojectCommand
 from mlproject.utils import make_directory
 
-
+# XXX : load default scripts dynamically 
 TEMPLATES_SCRIPTS = [
-    "dataset.py",
+    "project.py",
     "parameters.py",
 ]
-
-TEMPLATES_JUPYTER = [
-    
-]
-
-# XXX : verify if the path provided is empty folder
 
 class Command(MlprojectCommand):
 
     requires_project = False
 
     def syntax(self):
-        return "<path/project_name>"
+        return "<project_name> [project_dir]"
 
     def short_desc(self):
         return "Create new project"
 
     def add_options(self, parser):
-
-        parser.add_argument("project_name",
-                        help="choose the path or/and the name of the project")
-        parser.add_argument("--test_code", dest="test_code", 
-                action="store_true", help=SUPPRESS)
-
-    def render_template(self, file, args):
-        return file
+        parser.add_argument("project_name", help="name of the project")
+        parser.add_argument("project_dir",  nargs='?', default=getcwd(),
+                                 help="directory of the project")
 
     def _save_file(self, file, path):
         with open(path, "wb") as f:
@@ -49,38 +36,39 @@ class Command(MlprojectCommand):
         """
             Create and init folder projet
         """
-        path = getcwd()
         project_name = args.project_name
+        project_dir = args.project_dir
+        project_path = join(project_dir, project_name)
 
-        if not exists(join(path, project_name)):
-            makedirs(join(path, project_name))
-            path = join(path, project_name)
+        if not exists(project_path):
+            makedirs(project_path)
         else:
             # use Raise instead
-            exit("Folder already exists")
+            print("Folder already exists")
+            exit(1)
 
-        date = datetime.now().strftime(format="%Y.%m.%d")
-        with open(join(path, ".project"), "w") as f:
-            f.write("mlproject - {} - {}\n".format(project_name, date))
+        # create config file
+        date = datetime.now()
+        with open(join(project_path, ".project"), "w") as f:
+            f.write("mlproject - {} - {:%Y.%m.%d}\n".format(project_name, date))
 
+        # create dirs in project directory
         for dir_type in ['code', 'jupyter', 'models', 'data']:
-            make_directory(join(path, dir_type))
+            make_directory(join(project_path, dir_type))
 
+        # create dirs in data project directory
         for folder in ['train', 'test']:
             for folder_type in ['binary', 'raw', 'features']:
-                dir_name  = join(path, 'data', folder, folder_type)
+                dir_name  = join(project_path, 'data', folder, folder_type)
                 make_directory(dir_name)
 
-        data_folder = 'data_test' if args.test_code else 'data'
-
+        # copy default python script
         for template in TEMPLATES_SCRIPTS:
-            file = get_data('mlproject', join(data_folder, template))
-            file = self.render_template(file, args)
-            self._save_file(file, join(path, 'code', template))
+            file = get_data('mlproject', join('data', template))
+            self._save_file(file, join(project_path, 'code', template))
 
-        # XXX : dynamic name files in message 
         print("New project {} created ".format(project_name))
-        print("   {}\n".format(abspath(project_name)))
+        print("   {}\n".format(project_path))
         print("   Put your datasets in the data folder")
         print("   Update the files bellow in the code folder :")
         for file in TEMPLATES_SCRIPTS:

@@ -3,6 +3,7 @@ from os.path import join, exists, basename
 from sys import exit
 from argparse import SUPPRESS
 from time import clock
+from importlib import import_module
 
 import mlproject
 from mlproject.commands import MlprojectCommand
@@ -48,10 +49,12 @@ class Command(MlprojectCommand):
 
     def _load_generate_func(self):
 
-        from dataset import params, create_dataset, validation_splits
-        self.params = params
-        self.create_dataset = create_dataset
-        self.validation_splits = validation_splits
+        mod = import_module('project')
+        self.params = getattr(mod, 'params', None)
+        self.create_dataset = getattr(mod, 'create_dataset', None)
+        self.validation_splits = getattr(mod, 'validation_splits', None)
+        self.metric = getattr(mod, 'metric', None)
+        self.make_submit = getattr(mod, 'make_submit', None)
 
     def _extract_args(self, args):
         """
