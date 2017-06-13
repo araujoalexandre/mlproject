@@ -12,7 +12,7 @@ __author__
     Araujo Alexandre < aaraujo001@gmail.com >
 
 """
-from os import makedirs
+from os import makedirs, getcwd
 from os.path import join, isfile
 from shutil import copyfile
 from datetime import datetime
@@ -46,7 +46,7 @@ class GenerateWrapper:
 
         # self._save_custom = None
 
-        self.logger = init_log(self.path)
+        self.logger = init_log(getcwd())
         self._print_params()
 
     def create_folder(self):
@@ -116,9 +116,6 @@ class GenerateWrapper:
         """
             save X, y and weights in the right format
         """
-        assert is_pandas(X) or is_numpy(X), "dataset need to be Pandas "\
-                                                "DataFrame or NumPy array"
-
         if fold is not None:
             dump_folder = 'fold_{}'.format(fold)
         else:
@@ -154,6 +151,10 @@ class GenerateWrapper:
             self.params.target_test,
             self.params.id_train,
             self.params.id_test,
+            self.params.weights_train,
+            self.params.weights_test,
+            self.params.groups_train,
+            self.params.groups_test,
         ]
         for col in checks:
             if col and col in df.columns:
@@ -169,15 +170,41 @@ class GenerateWrapper:
         """
             get infos for train set
         """
+        params = self.params
         self.train_shape = df.shape
         self.train_cols_name = df.columns
+
+        if params.weights_train is not None and \
+            params.weights_train in self.train_cols_name:
+            self.weights_train = df[params.weights_train].values
+
+        if params.groups_train is not None and \
+            params.groups_train in self.train_cols_name:
+            self.groups_train = df[params.groups_train].values
 
     def get_test_infos(self, df):
         """
             get infos for test set
         """
+        params = self.params
         self.test_shape = df.shape
-        self.test_cols_name = df.columns
+        self.test_cols_name = list(df.columns)
+
+        if params.target_test is not None and \
+            params.target_test in self.test_cols_name:
+            self.target_test = df[params.target_test].values
+        
+        if params.id_test is not None and \
+            params.id_test in self.test_cols_name:
+            self.id_test = df[params.id_test].values
+        
+        if params.weights_test is not None and \
+            params.weights_test in self.test_cols_name:
+            self.weights_test = df[params.weights_test].values
+
+        if params.groups_test is not None and \
+            params.groups_test in self.test_cols_name:
+            self.groups_test = df[params.groups_test].values
 
     def create_feature_map(self):
         """
@@ -225,13 +252,26 @@ class GenerateWrapper:
 
         path = join(self.folder_path, "y.pkl")
         pickle_dump(self.y_true, path)
+        if hasattr(self, 'weights_train'):
+            path = join(self.folder_path, "weights_train.pkl")
+            pickle_dump(self.weights_train, path)
+        if hasattr(self, 'group_train'):
+            path = join(self.folder_path, "group_train.pkl")
+            pickle_dump(self.groups_train, path)
 
-        ## XXX : WEIGHTS / GROUPS
+        if hasattr(self, 'target_test'):
+            path = join(self.folder_path, "y_test.pkl")
+            pickle_dump(self.target_test, path)
+        if hasattr(self, 'id_test'):
+            path = join(self.folder_path, "id_test.pkl")
+            pickle_dump(self.id_test, path)
+        if hasattr(self, 'weights_test'):
+            path = join(self.folder_path, "weights_test.pkl")
+            pickle_dump(self.weights_test, path)
+        if hasattr(self, 'groups_test'):
+            path = join(self.folder_path, "groups_test.pkl")
+            pickle_dump(self.groups_test, path)
 
-        if self.weights is not None:
-            path = '{}/weights.pkl'.format(self.folder_path)
-            pickle_dump(self.weights, path)
-        
         path = join(self.folder_path, "validation.pkl")
         pickle_dump(self.validation, path)
 
