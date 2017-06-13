@@ -49,12 +49,6 @@ def define_params():
         train_name = 'train.csv',
         test_name = 'test.csv',
 
-        # seed value for the project
-        seed = 123456,
-
-        # value to fill for nan value in dataset
-        missing = -1,
-
         # name of the id features in train and test set
         id_train = 'id',
         id_test = 'id',
@@ -65,13 +59,22 @@ def define_params():
         target_train = 'target',
         target_test = 'target',
 
+        # XXX
         weights_train = None,
         weights_test = None,
 
-        group_train = None,
-        group_test = None,
+        # XXX
+        groups_train = None,
+        groups_test = None,
 
+        # number of folds for validation strategy
         n_folds = 5,
+
+        # seed value for the project
+        seed = 123456,
+
+        # value to fill for nan value in dataset
+        missing = -1,
     )
     return params
 
