@@ -1,6 +1,8 @@
 """
     utils functions ...
 """
+import os
+import sys
 import inspect
 from importlib import import_module
 
@@ -9,6 +11,7 @@ import numpy as np
 
 from mlproject.utils.io import BaseIO
 
+# XXX : check if pandas is installed otherwise create dummy pandas class
 
 def make_submit(path, name, id_test, yhat, score, date, header=['id','target']):
     """
@@ -20,6 +23,17 @@ def make_submit(path, name, id_test, yhat, score, date, header=['id','target']):
     file_name = "{}/submit_{}_{}_{:.5f}_0.00000.csv.gz".format(*args)
     df_submit.to_csv(file_name, index=False, compression='gzip')
    
+
+def background(func):
+    def wrapper(*args, **kwargs):
+        backup = sys.stdout
+        sys.stdout = None
+        if os.fork(): return
+        func(*args, **kwargs)
+        sys.stdout = backup
+        os._exit(os.EX_OK) 
+    return wrapper
+
 def load_features_name(path):
     """
         load features map file

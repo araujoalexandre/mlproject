@@ -17,6 +17,7 @@ from .functions import load_features_name
 from .functions import is_pandas
 from .functions import is_numpy
 from .functions import get_ext_cls
+from .functions import background 
 
 from .project import make_directory
 from .project import find_project_file
@@ -41,6 +42,7 @@ __all__ = [
     'is_pandas',
     'is_numpy',
     'get_ext_cls',
+    'background',
 
     'make_directory',
     'find_project_file',

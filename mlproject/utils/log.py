@@ -18,31 +18,16 @@ from os.path import join
 from logging import getLogger, basicConfig, INFO
 
 def init_log(path):
-    filename = join(path, 'logs.log')
-    logger = getLogger()
-    basicConfig(filename=filename, level=INFO)
-    return logger
+    f = open(join(path, 'logs.log'), 'a')
+    return f
 
 def print_and_log(logger, string):
     """
         print and log string
     """
-    print(string)
-    if logger != None:
-        logger.info(string)
-
-# def progress_bar(enum):
-#     bar_size = 40
-#     sys.stdout.write('[{}]'.format(' '*bar_size))
-#     sys.stdout.flush()
-#     sys.stdout.write("\b"*(bar_size+1))
-#     dot = len(enum) // 40
-#     for i, x in enumerate(enum):
-#         if i % dot == 0:
-#             sys.stdout.write("-")
-#             sys.stdout.flush()
-#         yield x
-
+    print(string, flush=True)
+    logger.write("{}\n".format(str(string)))
+    logger.flush()
 
 class ProgressTable:
 
@@ -52,7 +37,7 @@ class ProgressTable:
         self.len_title = len(self.headers)
         self.padding = padding
 
-        self.logger = logger.info
+        self.logger = logger
 
     def _format_timedelta(self, timedeltaObj):
         """
@@ -69,16 +54,16 @@ class ProgressTable:
         arr = ["|{x: ^{fill}}".format(x=x, fill=self.padding).format(x) 
                                                           for x in self.headers]
         string = "".join(arr) + "|"
-        self.logger(self._line)
-        self.logger(string)
-        self.logger(self._line)
+        print_and_log(self.logger, self._line)
+        print_and_log(self.logger, string)
+        print_and_log(self.logger, self._line)
 
     def score(self, fold, train, cv, start, end):
         """
             print score and other info 
         """
         if fold == 0: self._title()
-        if fold == None: self.logger(self._line)
+        if not isinstance(fold, int): print_and_log(self.logger, self._line)
 
         dur = self._format_timedelta(end - start)
         arr = [ fold, '{:.5f}'.format(train), '{:.5f}'.format(cv), 
@@ -86,8 +71,8 @@ class ProgressTable:
         arr = ["|{x: ^{fill}}".format(x=x, fill=self.padding).format(x) 
                                                                 for x in arr]
         string = "".join(arr) + "|"
-        self.logger(string)
-        if fold == None: self.logger(self._line)
+        print_and_log(self.logger, string)
+        if not isinstance(fold, int): print_and_log(self.logger, self._line)
 
     @property
     def _line(self):
