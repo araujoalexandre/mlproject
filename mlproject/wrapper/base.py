@@ -1,19 +1,19 @@
 from os import getcwd
-from os.path import isfile, join
+from os.path import exists, join
 from datetime import datetime
+from contextlib import redirect_stdout
 
 import numpy as np
 
 from mlproject.utils import get_ext_cls
 from mlproject.utils import make_directory, pickle_load
+from mlproject.utils import background
 
 
 class BaseWrapper:
 
     def __init__(self, params):
-        """
-            xxx
-        """
+
         self.path = getcwd()
         self.date = datetime.now()
         self.folder = join(self.path, "{}_{:%m%d%H%M}".format(\
@@ -31,14 +31,18 @@ class BaseWrapper:
         self.weights = None
 
     def __str__(self):
-        """
-            xxx
-        """
         if len(self.params.items()) > 0:
             return str(self.params)
         return ''
 
-    def _load(self, path):
+    def train(self, *args, **kwargs):
+        with open(join(self.path, 'verbose_model.log'), 'a') as f:
+            with redirect_stdout(f):
+                print("\n\n{}".format(self.name))
+                print(self.params)
+                self._train(*args, **kwargs)
+
+    def _load_data_ext(self, path):
         """
             private function to load a dataset
         """
@@ -46,42 +50,66 @@ class BaseWrapper:
         data = cls.load(path)
         return data
 
-    def load_target(self, tr_ix, va_ix):
+    def load_target(self):
         """
             Load and return y splits based on validation index
         """
-        y = pickle_load(join(self.path, "y.pkl"))
+        return pickle_load(join(self.path, "y.pkl"))
+
+    def split_target(self, tr_ix, va_ix):
+        """
+            Load and return y splits based on validation index
+        """
+        y = self.load_target()
         return y[tr_ix], y[va_ix]
 
-    def load_weights(self, tr_ix, va_ix):
+    def load_weights(self):
         """
             if weights exists, Load and return weights 
             splits based on validation index 
         """
-        if isfile(join(self.path, "weights.pkl")):
-            weights = pickle_load(join(self.path, "weights.pkl"))
+        if exists(join(self.path, "weights.pkl")):
+            return pickle_load(join(self.path, "weights.pkl"))
+        return None
+
+    def split_weights(self, tr_ix, va_ix):
+        """
+            if weights exists, Load and return weights 
+            splits based on validation index 
+        """
+        weights = self.load_weights()
+        if weights is not None:
             return weights[tr_ix], weights[va_ix]
         return None, None
 
-    def load_groups(self, tr_ix, va_ix):
+    def load_groups(self):
         """
             if weights exists, Load and return weights 
             splits based on validation index 
         """
-        # if isfile(join(self.path, "weights.pkl")):
-        #     weights = pickle_load(join(self.path, "weights.pkl"))
-        #     return weights[tr_ix], weights[va_ix]
+        if exists(join(self.path, "groups.pkl")):
+            return pickle_load(join(self.path, "weights.pkl"))
+        return None
+
+    def split_groups(self, tr_ix, va_ix):
+        """
+            if weights exists, Load and return weights 
+            splits based on validation index 
+        """
+        groups = self.load_groups()
+        if groups is not None:
+            return groups[tr_ix], groups[va_ix]
         return None, None
 
-    def load_train(self, fold):
+    def split_train(self, fold):
         """
             Load and return train & cv set from "Fold_X" folder
         """
         fold_folder = "fold_{}".format(fold)
         path_tr = join(self.path, fold_folder, "X_train.{}".format(self.ext))
         path_va = join(self.path, fold_folder, "X_cv.{}".format(self.ext))
-        xtr = self._load(path_tr)
-        xva = self._load(path_va)
+        xtr = self._load_data_ext(path_tr)
+        xva = self._load_data_ext(path_va)
         return xtr, xva
 
     def load_test(self):
@@ -92,5 +120,5 @@ class BaseWrapper:
         # XXX : if model with cmdline don't return dataset but path of dataset 
         if self.ext == 'custom':
             return path
-        X_test = self._load(path)
+        X_test = self._load_data_ext(path)
         return X_test
