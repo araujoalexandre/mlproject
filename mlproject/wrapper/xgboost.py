@@ -1,5 +1,5 @@
 
-from os.path import join
+from os.path import join, exists
 from contextlib import redirect_stdout
 from subprocess import Popen, PIPE, STDOUT
 import pandas as pd
@@ -84,37 +84,36 @@ class XGBoostWrapper(BaseWrapper):
                 the average coverage of the feature when it is used in trees
         """
         fmap_name = join(self.path, "features.map")
-        weight = self.model.get_score(fmap=fmap_name, importance_type='weight')
-        gain   = self.model.get_score(fmap=fmap_name, importance_type='gain')
-        cover  = self.model.get_score(fmap=fmap_name, importance_type='cover')
-
+        get_score = self.model.get_score
         metrics = {
-            'weight': weight,
-            'gain': gain,
-            'cover': cover,
+            'weight': get_score(fmap=fmap_name, importance_type='weight'),
+            'gain':   get_score(fmap=fmap_name, importance_type='gain'),
+            'cover':  get_score(fmap=fmap_name, importance_type='cover'),
         }
+
+        dump_path = join(self.folder, "fscore")
+        if not exists(dump_path):
+            make_directory(dump_path)
 
         for key, value in metrics.items():
 
-            df = pd.DataFrame({
-                        'features': list(value.keys()), 
-                        key: list(value.values()), 
-                    })
-
+            df = pd.DataFrame({ 'features': list(value.keys()), 
+                                    key: list(value.values())})
             df.sort_values(by=key, ascending=True, inplace=True)
-            args_name = [self.folder, self.name, key, fold]
-            name = "{}/{}_{}_{}.csv".format(*args_name)
-            df.to_csv(name, index=False)
-
+            file = join(dump_path, "{}_{}_{}.csv".format(self.name, key, fold))
+            df.to_csv(file, index=False)
 
     def _dump_txt_model(self, fold):
         """ 
             make and dump model txt file
         """
-        fmap_name = "{}/features.map".format(self.path)
-        file_name = "{}/{}_{}.txt".format(self.folder, self.name, fold)
-        self.model.dump_model(file_name, fmap=fmap_name, with_stats=True)
+        dump_path = join(self.folder, "dump_models")
+        if not exists(dump_path):
+            make_directory(dump_path)
 
+        fmap_name = join(self.path, "features.map")
+        file_name = join(dump_path, "{}_{}.txt".format(self.name, fold))
+        self.model.dump_model(file_name, fmap=fmap_name, with_stats=True)
 
     @property
     def get_model(self):
