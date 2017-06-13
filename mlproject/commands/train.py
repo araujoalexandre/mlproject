@@ -50,11 +50,15 @@ class Command(MlprojectCommand):
         return wrappers 
 
     def _run_in_prompt(self, cls_train):
+        #XXX : get thoses params from args
         cls_train.models_loop(save_model=True)
+        cls_train.predict_test(compute_score=False, submit=True)
 
     @background
     def _run_in_background(self, cls_train):
+        #XXX : get thoses params from args
         cls_train.models_loop(save_model=True)
+        cls_train.predict_test(compute_score=False, submit=True)
 
     def run(self, args):
         """
@@ -64,9 +68,12 @@ class Command(MlprojectCommand):
         self._inside_train_folder(self.path)
         
         functions = self._load_functions()
-        wrappers = self._load_wrappers()
+        keys = ('create_dataset', 'validation_splits', 'define_params')
+        for k in keys:
+            del functions[k]
 
-        cls_train = TrainWrapper(self.path, self.models_wrapper, **functions)
+        wrappers = self._load_wrappers()
+        cls_train = TrainWrapper(self.path, wrappers, **functions)
 
         if args.background:
             self._run_in_background(cls_train)
