@@ -1,16 +1,5 @@
 """
-__file__
-
-    train.py
-
-__description__
-
-    This file trains the models find in parameters file.
-    
-__author__
-
-    Araujo Alexandre < alexandre.araujo@wavestone.fr >
-
+    train wrapper
 """
 from os.path import join, exists
 from datetime import datetime
@@ -31,21 +20,29 @@ from mlproject.utils import ProgressTable
 
 class TrainWrapper:
 
-    def __init__(self, path, models_wrapper, metric, make_submit, verbose=True):
+    def __init__(self, path, models_wrapper, **kwargs):
 
         # path of the model folder
         self.path = path
+        
         # list of all the Wrappers with initilized with parameters
         self.models_wrapper = models_wrapper
+        
         # function to compute the score
-        self.metric = metric
+        self.metric = kwargs.get('metric')
+        
         # function to make submission file for Data Science Competi
-        self.make_submit = make_submit
+        self.make_submit = kwargs.get('make_submit', None)
+        
+        # function for target procession
+        self.target_preprocess = kwargs.get('target_preprocess', lambda x: x)
+        self.target_postprocess = kwargs.get('target_postprocess', lambda x: x)
+        
         # print informations and progression table
-        self.verbose = verbose
+        self.verbose = True
 
         # init logger
-        if verbose:
+        if self.verbose:
             self.logger = init_log(self.path)
 
         # load data
@@ -201,6 +198,9 @@ class TrainWrapper:
             # load test set
             xtest = model.load_test()
 
+            # num_class is 1 for binary classifaction and regression
+            num_class = 1
+
             # check task 
             multiclass = True if model.task == 'multiclass' else False
             if multiclass:
@@ -231,7 +231,7 @@ class TrainWrapper:
                     prediction[:, x] = test_stack[:, x::num_class].mean(axis=1)
             else:
                 prediction = test_stack.mean(axis=1)
-            pickle_dump(test_shape, model.path)
+            pickle_dump(test_stack, join(model.folder, "test_stack.pkl"))
 
             if submit:
                 self.make_submit(self.id_test, prediction, model.path, 
