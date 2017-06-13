@@ -19,7 +19,7 @@ import numpy as np
 
 from mlproject.utils import pickle_load, pickle_dump
 from mlproject.utils import init_log
-from mlproject.utils import print_and_log
+from mlproject.utils import print_and_log as print_
 from mlproject.utils import ProgressTable
 
 
@@ -76,14 +76,11 @@ class TrainWrapper:
     def _startup_message(self):
         """
         """
-        print_and_log(self.logger, "")
-        print_and_log(self.logger, "")
-        print_and_log(self.logger, "Starting")
-        print_and_log(self.logger, datetime.now().strftime("%Y.%m.%d %H:%M"))
-        print_and_log(self.logger, "")
+        print_(self.logger, "\n\nStarting")
+        print_(self.logger, "{:%Y.%m.%d %H:%M}\n".format(datetime.now()))
         for model in self.models_wrapper:
-            print_and_log(self.logger, model.name)
-        print_and_log(self.logger, "")
+            print_(self.logger, model.name)
+        print_(self.logger, "")
 
     def models_loop(self, save_model=True):
         """
@@ -123,9 +120,9 @@ class TrainWrapper:
             self.fitted_models = []
 
             if verbose:
-                print_and_log(self.logger, '')
-                print_and_log(self.logger, model.name)
-                print_and_log(self.logger, model) # print model params
+                print_(self.logger, '')
+                print_(self.logger, model.name)
+                print_(self.logger, model) # print model params
                 progress = ProgressTable(self.logger)
 
             # timer
@@ -134,10 +131,10 @@ class TrainWrapper:
             for fold, (tr_ix, va_ix) in enumerate(validation):
                 
                 # load y, weights, train
-                ytr, ycv = model.load_target(tr_ix, va_ix)
-                wtr, wcv = model.load_weights(tr_ix, va_ix)
-                gtr, gcv = model.load_groups(tr_ix, va_ix)
-                xtr, xcv = model.load_train(fold)
+                ytr, ycv = model.split_target(tr_ix, va_ix)
+                wtr, wcv = model.split_weights(tr_ix, va_ix)
+                gtr, gcv = model.split_groups(tr_ix, va_ix)
+                xtr, xcv = model.split_train(fold)
                 
                 # train
                 start = datetime.now()
@@ -170,8 +167,10 @@ class TrainWrapper:
             end_loop = datetime.now()
 
             # compute total score
-            model.score = self.metric(self.y_train, train_stack, 
-                    weight=self.weights, group=self.groups)
+            model.score = self.metric(  model.load_target(), 
+                                        train_stack, 
+                                        weights=model.load_weights(), 
+                                        groups=model.load_groups())
             mean_tr = np.mean(scores_tr)
             mean_cv = np.mean(scores_cv)
             stats = [np.std(scores_cv), np.var(scores_cv)] 
@@ -181,13 +180,13 @@ class TrainWrapper:
                 # print infos
                 progress.score('', mean_tr, mean_cv, start_loop, end_loop)
 
-                print_and_log(self.logger, "score train oof : {:.5f}".format(model.score))
-                print_and_log(self.logger, ("validation stats :  Std : {:.5f}, "
+                print_(self.logger, "score train oof : {:.5f}".format(model.score))
+                print_(self.logger, ("validation stats :  Std : {:.5f}, "
                                  "Var : {:.5f}").format(*stats))
-                print_and_log(self.logger, "Diff FULL TRAIN  - MEAN CV: {:.5f}".format(diff))
-                print_and_log(self.logger, '')
+                print_(self.logger, "Diff FULL TRAIN  - MEAN CV: {:.5f}".format(diff))
+                print_(self.logger, '')
 
-            pickle_dump(train_stack, model.path)
+            pickle_dump(train_stack, join(model.folder, "train_stack.pkl"))
             # if save_model:
             #     # pickle dump to right folder
             #     model.get_model
