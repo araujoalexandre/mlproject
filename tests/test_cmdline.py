@@ -44,7 +44,7 @@ class GenerateTest(BaseTests):
 
         scripts_dir = join(abspath(dirname(__file__)), 'scripts')
         # override project file in code folder
-        src = join(scripts_dir, "binary.py")
+        src = join(scripts_dir, "testcase1.py")
         copyfile(src, join(self.path, "code", "project.py"))
 
     def tearDown(self):

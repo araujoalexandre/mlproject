@@ -3,6 +3,7 @@ from os.path import join, exists, basename
 from sys import exit
 from argparse import SUPPRESS
 from time import clock
+from inspect import isfunction
 from importlib import import_module
 
 import mlproject
@@ -47,14 +48,16 @@ class Command(MlprojectCommand):
             return False
         return True
 
-    def _load_generate_func(self):
-
+    def _load_functions(self):
         mod = import_module('project')
-        self.params = getattr(mod, 'params', None)
-        self.create_dataset = getattr(mod, 'create_dataset', None)
-        self.validation_splits = getattr(mod, 'validation_splits', None)
-        self.metric = getattr(mod, 'metric', None)
-        self.make_submit = getattr(mod, 'make_submit', None)
+        print(mod)
+        functions = {}
+        func_list = vars(mod)['load']
+        for func in vars(mod).values():
+            if isfunction(func) and \
+                func.__name__ in func_list:
+                functions[func.__name__] = func
+        return functions
 
     def _extract_args(self, args):
         """
@@ -126,10 +129,13 @@ class Command(MlprojectCommand):
 
         if not self._inside_project(self.path): return
         if not self._inside_code_folder(self.path): return
-        self._load_generate_func()
+        
+        functions = self._load_functions()
+        validation_splits = functions['validation_splits']
+
         self._extract_args(args)
 
-        params = self.params
+        params = functions['define_params']()
         gen = GenerateWrapper(params)
 
         # get logger
@@ -142,12 +148,12 @@ class Command(MlprojectCommand):
         gen.y_true = self._try_load_target(params.target_train)
         # if target load successful, we make the validation split
         if gen.y_true:
-            gen.validation = self.validation_splits(params.n_folds, gen.y_true)            
+            gen.validation = validation_splits(params.n_folds, gen.y_true)            
 
         # Generate df_train & df_test
         print_(self.logger, '\ncreating train/test dataset')
         start = clock()
-        df_train, df_test = self.create_dataset(gen.validation)
+        df_train, df_test = functions['create_dataset'](gen.validation)
         end = clock()
         print_(self.logger, 'train/test set done in {:.0}'.format(end - start))
 
@@ -156,7 +162,8 @@ class Command(MlprojectCommand):
             # XXX : add check target_train in df_train.columns
             gen.y_true = df_train[params.target_train].values
             # make validation splits
-            gen.validation = self.validation_splits(params.n_folds, gen.y_true)
+            gen.validation = validation_splits(params.n_folds, 
+                                                gen.y_true, params.seed)
 
         # /!\ : LOAD GROUPS and WEIGHTS
         gen.weights = None

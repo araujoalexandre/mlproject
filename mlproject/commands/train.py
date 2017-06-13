@@ -1,6 +1,8 @@
 from os import getcwd, makedirs
 from os.path import join, exists
 from sys import exit
+from importlib import import_module
+from inspect import isfunction
 
 from mlproject.commands import MlprojectCommand
 from mlproject.api import TrainWrapper
@@ -32,11 +34,20 @@ class Command(MlprojectCommand):
             return False
         return True
 
-    def _load_models_wrapper(self):
-        from parameters import get_models_wrapper
-        from metric import metric
-        self.models_wrapper = get_models_wrapper()
-        self.metric = metric
+    def _load_functions(self):
+        mod = import_module('project')
+        functions = {}
+        func_list = vars(mod)['load']
+        for func in vars(mod).values():
+            if isfunction(func) and \
+                func.__name__ in func_list:
+                functions[func.__name__] = func
+        return functions
+
+    def _load_wrappers(self):
+        mod = import_module('parameters')
+        wrappers = mod.get_models_wrapper()
+        return wrappers 
 
     def _run_in_prompt(self, cls_train):
         cls_train.models_loop(save_model=True)
@@ -51,14 +62,11 @@ class Command(MlprojectCommand):
         """
         self.path = getcwd()
         self._inside_train_folder(self.path)
-        self._load_models_wrapper()
+        
+        functions = self._load_functions()
+        wrappers = self._load_wrappers()
 
-        self.make_submit = None
-
-        cls_train = TrainWrapper(   self.path, 
-                                    self.models_wrapper, 
-                                    self.metric, 
-                                    self.make_submit)
+        cls_train = TrainWrapper(self.path, self.models_wrapper, **functions)
 
         if args.background:
             self._run_in_background(cls_train)

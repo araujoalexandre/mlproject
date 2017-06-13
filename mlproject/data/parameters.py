@@ -1,41 +1,8 @@
 
-# classification
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.ensemble import BaggingClassifier
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import BernoulliNB
-from sklearn.naive_bayes import GaussianNB
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import RandomizedLogisticRegression
-from sklearn.linear_model import RidgeClassifier
-from sklearn.linear_model import SGDClassifier
-
-# Regression
-from sklearn.linear_model import HuberRegressor
-from sklearn.linear_model import ARDRegression
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import SGDRegressor 
-from sklearn.linear_model import RANSACRegressor
-from sklearn.ensemble import AdaBoostRegressor
-from sklearn.ensemble import BaggingRegressor
-from sklearn.ensemble import ExtraTreesRegressor
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.neighbors import RadiusNeighborsRegressor
-
-from sklearn.linear_model import BayesianRidge
-from sklearn.linear_model import ElasticNet
-from sklearn.linear_model import Hinge
-from sklearn.linear_model import Huber
-from sklearn.linear_model import Lasso
-from sklearn.linear_model import Lars
-from sklearn.linear_model import MultiTaskElasticNet
-from sklearn.kernel_ridge import KernelRidge
-
+from sklearn.ensemble import *
+from sklearn.neighbors import *
+from sklearn.linear_model import *
+from sklearn.naive_bayes import *
 
 # Wrapper
 from mlproject.wrapper import LibFFMWrapper
@@ -43,10 +10,6 @@ from mlproject.wrapper import LiblinearWrapper
 from mlproject.wrapper import LightGBMWrapper
 from mlproject.wrapper import SklearnWrapper
 from mlproject.wrapper import XGBoostWrapper
-
-
-
-
 
 
 #################################################
@@ -136,7 +99,7 @@ def get_models_wrapper():
     #         'criterion': 'entropy',
     #     },
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': ExtraTreesClassifier(),
@@ -147,8 +110,7 @@ def get_models_wrapper():
     #         'criterion': 'entropy',
     #     },
     # }
-    # models.append(Sklearn(params, paths))
-
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': RandomForestClassifier(),
@@ -159,7 +121,7 @@ def get_models_wrapper():
     #         'criterion': 'gini',
     #     },
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': ExtraTreesClassifier(),
@@ -170,13 +132,12 @@ def get_models_wrapper():
     #         'criterion': 'gini',
     #     },
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
 
-
-    # ##########################################################
-    # #####    Parameter Space for Scikit Linear Models    #####
-    # ##########################################################
+    ##########################################################
+    #####    Parameter Space for Scikit Linear Models    #####
+    ##########################################################
 
     max_iter = 1000
     ext = 'npz'
@@ -187,8 +148,7 @@ def get_models_wrapper():
     #     'params': {
     #     }
     # }
-    # models += [Sklearn(params, paths)]
-
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': Ridge(),
@@ -197,7 +157,7 @@ def get_models_wrapper():
     #         'max_iter': max_iter,
     #     }
     # }
-    # models += [Sklearn(params, paths)]
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': KernelRidge(),
@@ -206,7 +166,7 @@ def get_models_wrapper():
     #         'max_iter': max_iter,
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': HuberRegressor(),
@@ -215,7 +175,7 @@ def get_models_wrapper():
     #         'max_iter': max_iter,
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': ARDRegression(),
@@ -224,7 +184,7 @@ def get_models_wrapper():
     #         'max_iter': max_iter,
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': BayesianRidge(),
@@ -233,7 +193,7 @@ def get_models_wrapper():
     #         'max_iter': max_iter,
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': ElasticNet(),
@@ -242,7 +202,7 @@ def get_models_wrapper():
     #         'max_iter': max_iter,
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': SGDRegressor(),
@@ -251,7 +211,7 @@ def get_models_wrapper():
     #         'max_iter': max_iter,
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': LinearRegression(),
@@ -260,10 +220,7 @@ def get_models_wrapper():
     #     'params': {
     #     }
     # }
-    # models.append(Sklearn(params, paths))
-
-
-
+    # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': Lasso(),
@@ -272,14 +229,14 @@ def get_models_wrapper():
     #         'max_iter': max_iter, 
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
 
     #################################################
     #####    Parameter Space for Naive Bayes    #####
     #################################################
 
-    # ext = 'npz'
+    ext = 'npz'
 
     # params = {
     #     'model': BernoulliNB(),
@@ -287,7 +244,7 @@ def get_models_wrapper():
     #     'params': {
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
 
     # params = {
@@ -296,7 +253,7 @@ def get_models_wrapper():
     #     'params': {
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
 
     # params = {
@@ -305,10 +262,35 @@ def get_models_wrapper():
     #     'params': {
     #     }
     # }
-    # models.append(Sklearn(params, paths))
+    # models += [SklearnWrapper(params)]
 
 
- 
+    ###################################
+    #####    Sklearn Neighbors    #####
+    ###################################
+    
+    ext = 'npz'
+    n_jobs = -1
+
+    # params = {
+    #     'model': KNeighborsRegressor(),
+    #     'n_jobs': n_jobs,
+    #     'ext': ext,
+    #     'params': {
+    #     },
+    # }
+    # models += [SklearnWrapper(params)]
+
+    # params = {
+    #     'model': RadiusNeighborsRegressor(),
+    #     'n_jobs': n_jobs,
+    #     'ext': ext,
+    #     'params': {
+    #     },
+    # }
+    # models += [SklearnWrapper(params)]
+
+
     ################################################
     #####    Parameters space for LIBLINEAR    #####
     ################################################
@@ -319,50 +301,17 @@ def get_models_wrapper():
     #     'ext': ext,
     #     'params': {
     #         'type_solver': 11,
-    #         # 'cost': 1,
-    #         # 'epsilon_p': 0.1,
-    #         # 'epsilon_e': 0.01,
-    #         # 'bias': -1,
     #         'silent': 0,
-    #         # 'predict_opt': 1
     #     },
     # }
-    # # models.append(Liblinear(params, paths))
-
-
-    ###################################
-    #####    Sklearn Neighbors    #####
-    ###################################
-    
-    # ext = 'npz'
-    # n_jobs = -1
-
-    # params = {
-    #     'model': KNeighborsRegressor(),
-    #     'n_jobs': n_jobs,
-    #     'ext': ext,
-    #     'params': {
-    #     },
-    # }
-    # # models.append(Sklearn(params, paths))
-
-    # params = {
-    #     'model': RadiusNeighborsRegressor(),
-    #     'n_jobs': n_jobs,
-    #     'ext': ext,
-    #     'params': {
-    #     },
-    # }
-    # # models.append(Sklearn(params, paths))
-    
+    # models += [LiblinearWrapper(params)]
 
 
     #############################################
     #####    Parameters space for LIBFFM    #####
     #############################################
     
-    # ext = 'libffm'
-    # ext = 'custom'
+    # ext = 'ffm'
 
     # params = {
     #     'application':'classification',
@@ -374,7 +323,7 @@ def get_models_wrapper():
     #         'eta': 0.3,
     #     }
     # }
-    # models.append(LibFFM(params, paths))
+    # models += [LibFFMWrapper(params)]
 
     return models
 

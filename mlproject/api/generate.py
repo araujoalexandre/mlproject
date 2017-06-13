@@ -35,7 +35,7 @@ class GenerateWrapper:
         self.params = params
         self.path = self.params.project_path
 
-        self.train_index, self.cv_index = None, None
+        # self.train_index, self.cv_index = None, None
         self.train_shape, self.test_shape = (None, None), (None, None)
 
         self.date = datetime.now()
