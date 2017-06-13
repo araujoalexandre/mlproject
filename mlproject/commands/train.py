@@ -6,6 +6,7 @@ from mlproject.commands import MlprojectCommand
 from mlproject.api import TrainWrapper
 from mlproject.utils import parent_folder
 from mlproject.utils import print_and_log as print_
+from mlproject.utils import background
 
 
 # XXX : print info about size (Go) of model_folder
@@ -21,14 +22,12 @@ class Command(MlprojectCommand):
         return "run training for model folder"
 
     def add_options(self, parser):
-
-        # parser.add_option("--train", dest="train", action="store_true",
-        #                 help="run training after generation")
-        pass
+        parser.add_argument("--bg", dest="background", action="store_true",
+                        help="run training in background")
 
     def _inside_train_folder(self, path):
         if not parent_folder(path) == "models":
-            print_(self.logger, "this command needs to be "\
+            print("this command needs to be "\
                             "executed from inside a training folder")
             return False
         return True
@@ -39,23 +38,30 @@ class Command(MlprojectCommand):
         self.models_wrapper = get_models_wrapper()
         self.metric = metric
 
+    def _run_in_prompt(self, cls_train):
+        cls_train.models_loop(save_model=True)
+
+    @background
+    def _run_in_background(self, cls_train):
+        cls_train.models_loop(save_model=True)
+
     def run(self, args):
         """
             Generate dataset for training
         """
         self.path = getcwd()
-
-        print(args)
-        print('run training')
         self._inside_train_folder(self.path)
         self._load_models_wrapper()
 
-        print(self.models_wrapper)
+        self.make_submit = None
 
-        make_submit = None
-        train = TrainWrapper(self.path, self.models_wrapper, self.metric, make_submit)
-        train.models_loop(save_model=True)
+        cls_train = TrainWrapper(   self.path, 
+                                    self.models_wrapper, 
+                                    self.metric, 
+                                    self.make_submit)
 
-        # XXX load models_to_run 
-        # XXX process all models and load Wrapper
-
+        if args.background:
+            self._run_in_background(cls_train)
+        else:
+            # sys.stdout = None
+            self._run_in_prompt(cls_train)
