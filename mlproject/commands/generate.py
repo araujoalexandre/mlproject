@@ -6,6 +6,8 @@ from time import clock
 from inspect import isfunction
 from importlib import import_module
 
+import numpy as np
+
 import mlproject
 from mlproject.commands import MlprojectCommand
 from mlproject.api import GenerateWrapper
@@ -50,7 +52,6 @@ class Command(MlprojectCommand):
 
     def _load_functions(self):
         mod = import_module('project')
-        print(mod)
         functions = {}
         func_list = vars(mod)['load']
         for func in vars(mod).values():
@@ -64,62 +65,6 @@ class Command(MlprojectCommand):
             convert args from argsparse as class attributes
         """
         self.extensions = args.extensions
-
-    def _try_load_target(self, path):
-        """
-            try to load target if params.target_train if a path
-        """
-        if not exists(path):
-            return
-        if 'pkl' in basename(path):
-            try:
-                return pickle_load(path)
-            except:
-                return
-        try:
-            with open(path, 'r') as f:
-                l = []
-                while True:
-                    val = f.readine()
-                    if val == '':
-                        break
-                    l.append(float(l))
-            return l
-        except:
-            return
-
-    def _save_train_fold(self, gen, df_train, validation):
-        """
-            save train folds
-        """
-        for fold, (tr_ix, va_ix) in enumerate(validation):
-
-            ytr, yva = gen.split_target(tr_ix, va_ix)
-            wtr, wva = gen.split_weights(tr_ix, va_ix)
-            gtr, gva = gen.split_groups(tr_ix, va_ix)
-            xtr, xva = gen.split_data(df_train, tr_ix, va_ix)
-
-            kwtr = {'y': ytr, 'weights': wtr, 'groups': gtr, 'fold': fold}
-            kwva = {'y': yva, 'weights': wva, 'groups': gva, 'fold': fold}
-
-            for ext in self.extensions:
-                gen.dump(xtr, ext, 'tr', **kwtr)
-                gen.dump(xva, ext, 'va', **kwva)
-
-            message = ('Fold {}/{}\tTrain shape\t[{}|{}]\tCV shape\t[{}|{}]')
-            print_(self.logger, message.format(fold+1, len(validation), 
-                                                    *xtr.shape, *xva.shape))
-
-    def _save_test(self, gen, df_test):
-        """
-            save test set
-        """
-        # XXX : add target if exists
-        # XXX : add weights if exists
-        # XXX : add group if exists
-        for ext in self.extensions:
-            gen.dump(df_test, ext, 'test')
-        print_(self.logger, '\t\tTest shape\t[{}|{}]'.format(*df_test.shape))
 
     def run(self, args):
         """
@@ -135,65 +80,68 @@ class Command(MlprojectCommand):
 
         self._extract_args(args)
 
-        params = functions['define_params']()
+        define_params = functions.pop("define_params", None)
+        create_dataset = functions.pop("create_dataset", None)
+
+        assert define_params, "Project scripts is not define correctly"
+        assert create_dataset, "Project scripts is not define correctly"
+
+        if define_params:
+            params = define_params()
+
         gen = GenerateWrapper(params)
 
         # get logger
         self.logger = gen.logger
 
-        # XXX no need => only for training step
-        # # init pprint class
+        # load attributes
+        gen.load_attributes()
+        
+        # if seed is int convert to list
+        if isinstance(params.seed, int):
+            seeds = [params.seed]
+        else:
+            seeds = params.seed
 
-        # try to load the target 
-        gen.y_true = self._try_load_target(params.target_train)
-        # if target load successful, we make the validation split
-        if gen.y_true:
-            gen.validation = validation_splits(params.n_folds, gen.y_true)            
+        # loop over seeds values
+        for i, seed_value in enumerate(seeds):
 
-        # Generate df_train & df_test
-        print_(self.logger, '\ncreating train/test dataset')
-        start = clock()
-        df_train, df_test = functions['create_dataset'](gen.validation)
-        end = clock()
-        print_(self.logger, 'train/test set done in {:.0}'.format(end - start))
+            # create validqtion splits
+            gen.validation += [validation_splits(   params.n_folds, 
+                                                    gen.y_test,
+                                                    seed_value
+                                                )]
+            # Generate df_train & df_test
+            print_(self.logger, "\ncreating train/test dataset")
+            start = clock()
+            df_train, df_test = create_dataset(gen.validation[i])
+            print_(self.logger, "train/test set done in {:.0}".format(clock() 
+                                                                    - start))
 
-        if not gen.y_true:
-            # extract target features
-            # XXX : add check target_train in df_train.columns
-            gen.y_true = df_train[params.target_train].values
-            # make validation splits
-            gen.validation = validation_splits(params.n_folds, 
-                                                gen.y_true, params.seed)
+            # XXX : df_train and df_test done
+            # what about making the conformity test now 
+            # detect nan / inf value and raise error if type format not compatible
 
-        # /!\ : LOAD GROUPS and WEIGHTS
-        gen.weights = None
+            # create folder
+            gen.create_folder()
+            # clean dataset
+            df_train, df_test = gen.cleaning(df_train), gen.cleaning(df_test)
+            # save infos
+            gen.get_train_infos(df_train)
+            gen.get_test_infos(df_test)
+            # save and generate features map
+            gen.create_feature_map()
+            
+            # save train fold
+            gen._save_train_fold(   self.extensions, 
+                                    df_train, 
+                                    gen.validation[i], 
+                                    seed_value)
 
-        # XXX : df_train and df_test done
-        # what about making the conformity test now 
-        # detect nan / inf value and raise error if type format not compatible
-
-        # create folder
-        gen.create_folder()
-
-        # clean dataset
-        df_train = gen.cleaning(df_train)
-        df_test = gen.cleaning(df_test)
-
-        # save infos
-        gen.get_train_infos(df_train)
-        gen.get_test_infos(df_test)
-
-        # save and generate features map
-        gen.create_feature_map()
-
-        # save train fold
-        self._save_train_fold(gen, df_train, gen.validation)
-
-        # save test and do conformity tests 
-        # between train and test
-        if df_test is not None:
-            self._save_test(gen, df_test)
-            gen.conformity_test()
+            # save test and do conformity tests between train and test
+            if df_test is not None:
+                gen._save_test(self.extensions, df_test)
+                gen.conformity_test()
 
         # save infos
         gen.save_infos()
