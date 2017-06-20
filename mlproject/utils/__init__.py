@@ -25,6 +25,7 @@ from .project import parent_folder
 from .project import current_folder
 from .project import inside_project
 from .project import project_path
+from .project import ProjectPath
 
 from .pkl import pickle_load
 from .pkl import pickle_dump
@@ -50,6 +51,7 @@ __all__ = [
     'current_folder',
     'inside_project',
     'project_path',
+    'ProjectPath',
 
     'pickle_load',
     'pickle_dump',
