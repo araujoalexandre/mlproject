@@ -5,6 +5,7 @@ from os import getcwd
 from os.path import join
 from mlproject.utils import ParametersSpace
 from mlproject.utils import project_path
+from mlproject.utils import ProjectPath
 
 import numpy as np
 import pandas as pd
@@ -43,7 +44,7 @@ def define_params():
         # path to the project and to the data folder
         project_path = project_path(getcwd()),
         data_path = join(project_path(getcwd()), 'data'),
-        
+
         # names of dataset
         # the function will generate train_path and test_path attributes
         train_name = 'train.csv',
@@ -90,11 +91,11 @@ def create_dataset(splits):
     """
         Create your dataset here !
     """
+    project = ProjectPath(project_path(getcwd()))
     params = define_params()
-    data = params.data_path
 
-    train_path = join(data, 'train', 'raw', 'train.csv')
-    test_path = join(data, 'test', 'raw', 'test.csv')
+    train_path = join(project.data.train.raw(), params.train_name)
+    test_path = join(project.data.test.raw(), params.test_name)
     
     df_train = pd.read_csv(train_path)
     df_test = pd.read_csv(test_path)
