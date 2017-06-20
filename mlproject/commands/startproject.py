@@ -53,12 +53,12 @@ class Command(MlprojectCommand):
             f.write("mlproject - {} - {:%Y.%m.%d}\n".format(project_name, date))
 
         # create dirs in project directory
-        for dir_type in ['code', 'jupyter', 'models', 'data']:
+        for dir_type in ["code", "jupyter", "models", "data"]:
             make_directory(join(project_path, dir_type))
 
         # create dirs in data project directory
-        for folder in ['train', 'test']:
-            for folder_type in ['binary', 'raw', 'features']:
+        for folder in ["train", "test"]:
+            for folder_type in ["raw", "features", "attributes"]:
                 dir_name  = join(project_path, 'data', folder, folder_type)
                 make_directory(dir_name)
 
@@ -69,7 +69,7 @@ class Command(MlprojectCommand):
 
         print("New project {} created ".format(project_name))
         print("   {}\n".format(project_path))
-        print("   Put your datasets in the data folder")
+        print("   Put your train & test set in the data/raw/ folder")
         print("   Update the files bellow in the code folder :")
         for file in TEMPLATES_SCRIPTS:
             print("     - {}".format(file))
