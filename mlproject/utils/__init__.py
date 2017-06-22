@@ -12,7 +12,6 @@ __author__
     Araujo Alexandre < alexandre.araujo@wavestone.fr >
 
 """
-from .functions import make_submit
 from .functions import load_features_name
 from .functions import is_pandas
 from .functions import is_numpy
@@ -38,7 +37,6 @@ from .parameters import ParametersSpace
 
 __all__ = [
 
-    'make_submit',
     'load_features_name',
     'is_pandas',
     'is_numpy',

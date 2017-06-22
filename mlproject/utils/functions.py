@@ -13,16 +13,6 @@ from mlproject.utils.io import BaseIO
 
 # XXX : check if pandas is installed otherwise create dummy pandas class
 
-def make_submit(path, name, id_test, yhat, score, date, header=['id','target']):
-    """
-        Function to create sumbit file for Kaggle competition
-    """
-    ID, TARGET = header.split(',')
-    df_submit = pd.DataFrame({ID: id_test, TARGET: yhat})
-    args = [path, name, date, score]
-    file_name = "{}/submit_{}_{}_{:.5f}_0.00000.csv.gz".format(*args)
-    df_submit.to_csv(file_name, index=False, compression='gzip')
-   
 
 def background(func):
     def wrapper(*args, **kwargs):
