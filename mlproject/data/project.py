@@ -147,13 +147,16 @@ def metric(y, yhat, weights=None, groups=None):
     XXX
 """
 
-def make_submit(path, id_test, yhat, model_name, date, score, args):
+def make_submit(path, id_test, yhat, model_name, date, score_va, score_test):
     """
         Create the submission file here !
     """
-    df_submit = pd.DataFrame({'id':id_test, 'target': yhat})
-    file_name = "{}/submit_{}_{}_{:.5f}_0.00000.csv.gz".format(*args)
-    df_submit.to_csv(file_name, index=False, compression='gzip')
+    df_submit = pd.DataFrame({'id': id_test, 'target': yhat})
+    name = ("submit_{name}_{date:%m%d_%H%M}_"
+            "{score_va:.5f}_{score_test:.5f}.csv.gz").format(name=model_name, 
+                            date=date, score_va=score_va, score_test=score_test)
+    out = join(path, name)
+    df_submit.to_csv(out, index=False, compression='gzip')
 
 ################################################################################
 #####                  Function to pre-process the target                  #####

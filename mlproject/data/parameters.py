@@ -32,8 +32,8 @@ def get_models_wrapper():
     nthread = 12
     predict_option = 'best_ntree_limit'
     booster = {
-        'num_boost_round': 600, 
-        'early_stopping_rounds': 50, 
+        'num_boost_round': 20000, 
+        'early_stopping_rounds': 10, 
         'verbose_eval': 30,
     }
 
@@ -46,7 +46,22 @@ def get_models_wrapper():
             'nthread': nthread,
             'objective': 'binary:logistic',
             'eval_metric': 'logloss',
-            'eta': 0.05,
+            'eta': 0.1,
+            'silent': 1,
+        },
+    }
+    models += [XGBoostWrapper(params)]
+
+    params = {
+        'ext': ext,
+        'predict_option': predict_option,
+        'booster': booster,
+        'params': {
+            'booster': 'gbtree',
+            'nthread': nthread,
+            'objective': 'binary:logistic',
+            'eval_metric': 'logloss',
+            'eta': 0.1,
             'silent': 1,
         },
     }
