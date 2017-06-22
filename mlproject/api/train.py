@@ -3,13 +3,19 @@
 """
 from os.path import join, exists
 from datetime import datetime
+from copy import deepcopy
+from itertools import product
 
 import numpy as np
 
+from mlproject.api import BaseAPI
+from mlproject.utils import get_ext_cls
 from mlproject.utils import pickle_load, pickle_dump
 from mlproject.utils import init_log
+from mlproject.utils import project_path, ProjectPath
 from mlproject.utils import print_and_log as print_
 from mlproject.utils import ProgressTable
+from mlproject.utils import repeat_values, ncycles_with_copy
 
 
 # ask to add a comment for the batch of model maybe in the parameters files ?
@@ -18,12 +24,13 @@ from mlproject.utils import ProgressTable
 # save features importance in his own folder
 
 
-class TrainWrapper:
+class TrainWrapper(BaseAPI):
 
     def __init__(self, path, models_wrapper, **kwargs):
 
         # path of the model folder
         self.path = path
+        self.project = ProjectPath(project_path(self.path)) 
         
         # list of all the Wrappers with initilized with parameters
         self.models_wrapper = models_wrapper
@@ -48,28 +55,6 @@ class TrainWrapper:
         # load data
         self._load_data()
 
-    def _load_data(self):
-        """
-            function to load important data files : 
-                id [train/test]
-                y  [train/test]
-                weights [train/test]
-                groups [train/test]
-        """
-        self.infos = pickle_load(join(self.path, "infos.pkl"))
-        self.train_shape = self.infos.get("train_shape")
-        self.test_shape = self.infos.get("test_shape")
-
-        for dataset in ["train", "test"]:
-            if dataset == "test" and self.test_shape is (None, None): 
-                continue
-            for file in ["id", "y", "weights", "groups"]:
-                filename = '_'.join([file, dataset])
-                file_path = join(self.path, filename)
-                if exists(file_path):
-                    setattr(self, filename, pickle_load(file_path))
-        self.validation = pickle_load(join(self.path, "validation.pkl"))
-
     def _startup_message(self):
         """
         """
@@ -79,160 +64,258 @@ class TrainWrapper:
             print_(self.logger, model.name)
         print_(self.logger, "")
 
+    def _load_data(self):
+        """
+            function to load important data files : 
+                id [train/test]
+                y  [train/test]
+                weights [train/test]
+                groups [train/test]
+        """
+        infos = dict()
+        if exists(join(self.path, "infos.pkl")):
+            infos = pickle_load(join(self.path, "infos.pkl"))
+        self.train_shape = infos.pop("train_shape", None)
+        self.test_shape  = infos.pop("test_shape", None)
+        self.params      = infos.pop("project_params", None)
+
+        self._load_id()
+        self._load_target()
+        self._load_weights()
+        self._load_groups()
+
+        self.validation = pickle_load(join(self.path, "validation.pkl"))
+
+    def _load_data_ext(self, path, ext):
+        """
+            private function to load a dataset
+        """
+        cls = get_ext_cls()[ext]
+        data = cls.load(path)
+        return data
+
+    def split_target(self, tr_ix, va_ix):
+        """
+            Load and return y splits based on validation index
+        """
+        return self.y_train[tr_ix], self.y_train[va_ix]
+
+    def split_weights(self, tr_ix, va_ix):
+        """
+            if weights exists, Load and return weights 
+            splits based on validation index 
+        """
+        if self.weights_train is not None:
+            return self.weights_train[tr_ix], self.weights_train[va_ix]
+        return None, None
+
+    def split_groups(self, tr_ix, va_ix):
+        """
+            if weights exists, Load and return weights 
+            splits based on validation index 
+        """
+        if self.groups_train is not None:
+            return self.groups_train[tr_ix], self.groups_train[va_ix]
+        return None, None
+
+    def load_train(self, fold, seed, ext):
+        """
+            Load and return train & cv set from "fold_*" folder
+        """
+        fold_folder = "fold_{}".format(fold)
+        path_tr = join(self.path, fold_folder, "X_tr_{}.{}".format(seed, ext))
+        path_va = join(self.path, fold_folder, "X_va_{}.{}".format(seed, ext))
+        xtr = self._load_data_ext(path_tr, ext)
+        xva = self._load_data_ext(path_va, ext)
+        return xtr, xva
+
+    def load_test(self, ext):
+        """
+            Load the test dataset from "test" folder
+        """
+        path = join(self.path, "test", "X_test.{}".format(ext))
+        X_test = self._load_data_ext(path, ext)
+        return X_test
+
+
     def models_loop(self, save_model=True):
         """
             training loop 
         """
         verbose = self.verbose
         train_shape = self.train_shape
-        validation = self.validation
-        nfolds = len(validation)
+        metric = self.metric
+        nfolds = len(self.validation)
+        nseed = len(self.params.seed)
+
+        # container for fitted models
+        self.fitted_models = []
 
         # print startup message 
         if verbose:
             self._startup_message()
 
-        for enum, model in enumerate(self.models_wrapper):
+        # iterator for future value
+        iter_validation = iter(self.validation)
+        # id to flag new bagging iteration
+        prev_model_id = None
+        self.models_id = [x for x in range(len(self.models_wrapper))]
 
-            num_class = 1
-            # override num_class
-            if model.task == 'multiclass':
-                num_class = len(set(self.y_train))
-
-            model.name    = "{}_{}".format(model.name, enum)
-            model.folder  = "{}_{}".format(model.folder, enum)
+        loop = product(enumerate(self.models_wrapper), 
+                        enumerate(self.params.seed))
+        for enum, ((model_id, model), (seed_id, seed)) in enumerate(loop):
             
-            for dataset in ["train", "test"]:
-                if dataset == "test" and self.test_shape is (None, None): 
-                    continue
-                for attr_type in ["y", "weights", "group"]:
-                    attr = '_'.join([attr_type, dataset])
-                    if hasattr(self, attr):
-                        setattr(model, attr, getattr(self, attr))
+            # save wrapper for test prediction
+            self.fitted_models += [deepcopy(model)]
+            model = self.fitted_models[-1]
 
-            # stacking
-            train_stack = np.zeros((train_shape[0], num_class))
+            # transfer seed to model
+            model.seed = seed
 
-            scores_tr, scores_cv = [], []
-            self.fitted_models = []
+            # extract extension to use
+            ext = model.ext
 
-            if verbose:
-                print_(self.logger, '')
-                print_(self.logger, model.name)
-                print_(self.logger, model) # print model params
-                progress = ProgressTable(self.logger)
+            # (re-)init a new bagged model
+            if prev_model_id != model_id:
+
+                # add enum to model.name and model.folder
+                model_name = "{}_{}".format(model.name, model_id)
+                model_folder = "{}_{}".format(model.folder, model_id)
+
+                # reset
+                prev_model_id = model_id
+                # out of fold prediction for stacking
+                train_stack = None
+                # bagged scores
+                all_scores_tr, all_scores_va = [], []
+                # write header msg 
+                if verbose:
+                    print_(self.logger, '')
+                    print_(self.logger, model_name)
+                    print_(self.logger, model) # print model params
+                    # init a new progress table
+                    progress = ProgressTable(self.logger)
+
+            model.name = model_name
+            model.folder = model_folder
+
+            # model scores
+            scores_tr, scores_va = [], []
 
             # timer
             start_loop = datetime.now()
             # start training loop
-            for fold, (tr_ix, va_ix) in enumerate(validation):
-                
+            for fold, (tr_ix, va_ix) in enumerate(self.validation[enum%nseed]):
+
                 # load y, weights, train
-                ytr, ycv = model.split_target(tr_ix, va_ix)
-                wtr, wcv = model.split_weights(tr_ix, va_ix)
-                gtr, gcv = model.split_groups(tr_ix, va_ix)
-                xtr, xcv = model.split_train(fold)
-                
+                ytr, yva = self.split_target(tr_ix, va_ix)
+                wtr, wva = self.split_weights(tr_ix, va_ix)
+                gtr, gva = self.split_groups(tr_ix, va_ix)
+                xtr, xva = self.load_train(fold, seed, ext)
+
                 # train
                 start = datetime.now()
-                model.train(xtr, xcv, ytr, ycv, fold)
+                model.train(xtr, xva, ytr, yva, fold)
                 end = datetime.now()
                 
                 # make prediction
-                ytr_hat = model.predict(xtr)
-                ycv_hat = model.predict(xcv)
+                ytr_hat = model.predict(xtr, fold=fold)
+                yva_hat = model.predict(xva, fold=fold)
 
-                # process dim y_hat
-                if ytr_hat.ndim == 1:
-                    ytr_hat = ytr_hat.reshape(-1, 1)
-                if ycv_hat.ndim == 1:
-                    ycv_hat = ycv_hat.reshape(-1, 1)
-
-                # evaluating model => XXX load metric
-                tr_error = self.metric(ytr, ytr_hat, weights=wtr, groups=gtr)
-                cv_error = self.metric(ycv, ycv_hat, weights=wcv, groups=gcv)
+                # score model
+                tr_error = metric(ytr, ytr_hat, weights=wtr, groups=gtr)
+                va_error = metric(yva, yva_hat, weights=wva, groups=gva)
                 scores_tr += [tr_error]
-                scores_cv += [cv_error]
+                scores_va += [va_error]
+                all_scores_tr += [tr_error]
+                all_scores_va += [va_error]
 
-                # filling train stacking dataset
-                train_stack[va_ix, :] = ycv_hat
+                # fill train stacking dataset
+                if train_stack is None:
+                    train_stack = np.zeros((train_shape[0], yva_hat.shape[1]))
+                # accumulate probabilities 
+                train_stack[va_ix, :] += yva_hat
 
                 # update progress table
-                progress.score(fold, tr_error, cv_error, start, end)
+                progress.score(seed, fold, tr_error, va_error, start, end)
 
             # timer
             end_loop = datetime.now()
 
-            # compute total score
-            model.score = self.metric(  model.load_target(), 
-                                        train_stack, 
-                                        weights=model.load_weights(), 
-                                        groups=model.load_groups())
             mean_tr = np.mean(scores_tr)
-            mean_cv = np.mean(scores_cv)
-            stats = [np.std(scores_cv), np.var(scores_cv)] 
-            diff = model.score - np.mean(scores_cv)
+            mean_va = np.mean(scores_va)
+            progress.score('/', '/', mean_tr, mean_va, start_loop, end_loop)
 
-            if verbose:
-                # print infos
-                progress.score('', mean_tr, mean_cv, start_loop, end_loop)
+            # compute total score
+            model.score = metric(   self.y_train, 
+                                    (train_stack / (seed_id+1)), 
+                                    weights=self.weights_train, 
+                                    groups=self.groups_train)
 
-                print_(self.logger, "score train oof : {:.5f}".format(model.score))
-                print_(self.logger, ("validation stats :  Std : {:.5f}, "
-                                 "Var : {:.5f}").format(*stats))
-                print_(self.logger, "Diff FULL TRAIN  - MEAN CV: {:.5f}".format(diff))
-                print_(self.logger, '')
+            # end of bagged model
+            if enum % nseed == (nseed - 1):
+                
+                # averaging probabilities
+                train_stack /= nseed
 
-            pickle_dump(train_stack, join(model.folder, "train_stack.pkl"))
-            # if save_model:
-            #     # pickle dump to right folder
-            #     model.get_model
+                if verbose:
+                    stats = [np.std(all_scores_va), np.var(all_scores_va)] 
+                    diff = model.score - np.mean(all_scores_va)
+                    # print infos
+                    msg = ( "score on average train oof : {:.5f}\n"
+                            "validation stats : std : {:.5f}, var : {:.5}\n"
+                            "diff (train_oof - mean valid) : {:.5f}\n")
+                    print_(self.logger, msg.format(model.score, *stats, diff))
+
+                pickle_dump(train_stack, join(model_folder, "train_stack.pkl"))
+            
+            if save_model:
+                model.save_model()
 
     def predict_test(self, compute_score=False, submit=True):
         """
+            loop over fitted model for prediction
         """
         test_shape = self.test_shape
-        nfolds = len(self.fitted_models)
-        for enum, model in enumerate(self.models_wrapper):
+        metric = self.metric
+        nfolds = len(self.validation[0])
+        nseed = len(self.params.seed)
+
+        for enum, model in enumerate(self.fitted_models):
             
+            # extract seed
+            ext = model.ext
+
             # load test set
-            xtest = model.load_test()
+            xtest = self.load_test(ext)
 
-            # num_class is 1 for binary classifaction and regression
-            num_class = 1
+            # prediction on test set from all fold model
+            fold_preds = model.predict(xtest)
+            nclass = fold_preds.shape[1] // nfolds
 
-            # check task 
-            multiclass = True if model.task == 'multiclass' else False
-            if multiclass:
-                num_class = len(set(self.y_train))
-
-            # init test_stack
-            test_stack = np.zeros((test_shape[0], nfolds*num_class))
-
-            for fold in range(nfolds):
-
-                # evaluating model
-                y_hat = model.predict(xtest)
-
-                # process dim y_hat
-                if y_hat.ndim == 1:
-                    y_hat = y_hat.reshape(-1, 1)
-
-                # filling test stacking dataset
-                if multiclass:
-                    index = np.array(list(range(num_class)))
-                    test_stack[:, index + fold*num_class] = y_hat
-                else:
-                    test_stack[:, fold] = y_hat
-
-            if multiclass:
-                prediction = np.zeros((test_shape[0], num_class))
-                for x in range(num_class):
-                    prediction[:, x] = test_stack[:, x::num_class].mean(axis=1)
+            if nclass > 1:
+                test_stack = np.zeros((test_shape[0], nclass))
+                for x in range(nclass):
+                    test_stack[:, x] = fold_preds[:, x::nclass].mean(axis=1)
             else:
-                prediction = test_stack.mean(axis=1)
-            pickle_dump(test_stack, join(model.folder, "test_stack.pkl"))
+                test_stack = fold_preds.mean(axis=1)
 
-            if submit:
-                self.make_submit(self.id_test, prediction, model.path, 
-                    model.name, model.date, model.score)
+            if enum % nseed == (nseed - 1):
+
+                pickle_dump(test_stack, join(model.folder, "test_stack.pkl"))
+
+                if submit and hasattr(self, 'id_test'):
+
+                    print()
+
+                    score_test = None
+                    if self.y_test is not None:
+                        score_test = metric(self.y_test,
+                                            test_stack, 
+                                            weights=self.weights_train, 
+                                            groups=self.groups_train)
+
+                    score_test = score_test or 0.0
+                    args = [model.path, self.id_test, test_stack, 
+                            model.name, model.date, model.score, score_test]
+                    self.make_submit(*args)

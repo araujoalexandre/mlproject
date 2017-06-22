@@ -19,6 +19,7 @@ from datetime import datetime
 
 import numpy as np
 
+from mlproject.api import BaseAPI
 from mlproject.utils import is_pandas, is_numpy
 from mlproject.utils import ProjectPath
 from mlproject.utils import print_and_log as print_
@@ -30,7 +31,7 @@ from mlproject.utils import get_ext_cls
 
 # XXX : get and save the shapes of train and test files in project folder ??
 
-class GenerateWrapper:
+class GenerateWrapper(BaseAPI):
 
     def __init__(self, params):
 
@@ -45,6 +46,9 @@ class GenerateWrapper:
         self.folder_path = join(self.project.models(), self.folder_name)
 
         self.validation = []
+
+        # load attributes
+        self.load_attributes()
 
         self.logger = init_log(getcwd())
         self._print_params()
@@ -75,66 +79,6 @@ class GenerateWrapper:
                     "SEED\t\t{seed}"
                 )
         print_(self.logger, message.format(**args_msg))
-
-    def _load_target(self):
-        """
-            load target in data/attributes folder
-        """
-        attr_path = self.project.data.train.attributes()
-        path = join(attr_path, self.params.target_train)
-        self.y_train = pickle_load('{}.pkl'.format(path))
-        self.y_test = None
-        if self.params.target_test is not None:
-            path = join(attr_path, self.params.target_test)
-            self.y_test = pickle_load('{}.pkl'.format(path))
-
-    def _load_id(self):
-        """
-            load id in data/attributes folder
-        """
-        self.id_train, self.id_test = None, None
-        attr_path = self.project.data.train.attributes()
-        if self.params.id_train is not None:
-            path = join(attr_path, self.params.id_train)
-            self.id_train = pickle_load('{}.pkl'.format(path))
-        if self.params.id_test is not None:
-            path = join(attr_path, self.params.id_test)
-            self.id_test = pickle_load('{}.pkl'.format(path))
-
-    def _load_weights(self):
-        """
-            load weights in data/attributes folder
-        """
-        self.weights_train, self.weights_test = None, None
-        attr_path = self.project.data.train.attributes()
-        if self.params.weights_train is not None:
-            path = join(attr_path, self.params.weights_train)
-            self.weights_train = pickle_load('{}.pkl'.format(path))
-        if self.params.weights_test is not None:
-            path = join(attr_path, self.params.weights_test)
-            self.weights_test = pickle_load('{}.pkl'.format(path))
-
-    def _load_groups(self):
-        """
-            load groups in data/attributes folder
-        """
-        self.groups_train, self.groups_test = None, None
-        attr_path = self.project.data.train.attributes()
-        if self.params.groups_train is not None:
-            path = join(attr_path, self.params.groups_train)
-            self.groups_train = pickle_load('{}.pkl'.format(path))
-        if self.params.groups_test is not None:
-            path = join(attr_path, self.params.groups_test)
-            self.groups_test = pickle_load('{}.pkl'.format(path))
-
-    def load_attributes(self):
-        """
-            load attributes from data/attributes folder
-        """
-        self._load_id()
-        self._load_target()
-        self._load_weights()
-        self._load_groups()
 
     def _split_target(self, tr_index, cv_index):
         """
@@ -173,7 +117,7 @@ class GenerateWrapper:
 
         return df.loc[tr_index].values, df.loc[cv_index].values
 
-    def _dump(self, X, ext, name, y=None, weights=None, groups=None, fold=None):
+    def _dump(self, X, name, ext, y=None, weights=None, groups=None, fold=None):
         """
             save X, y and weights in the right format
         """
@@ -207,8 +151,8 @@ class GenerateWrapper:
             kwva = {'y': yva, 'weights': wva, 'groups': gva, 'fold': fold}
 
             for ext in extensions:
-                self._dump(xtr, ext, 'tr_{}'.format(seed_value), **kwtr)
-                self._dump(xva, ext, 'va_{}'.format(seed_value), **kwva)
+                self._dump(xtr, 'tr_{}'.format(seed_value), ext, **kwtr)
+                self._dump(xva, 'va_{}'.format(seed_value), ext, **kwva)
 
             message = ('Fold {}/{}\tTrain shape\t[{}|{}]\tCV shape\t[{}|{}]')
             print_(self.logger, message.format(fold+1, len(validation), 
@@ -218,11 +162,10 @@ class GenerateWrapper:
         """
             save test set
         """
-        # XXX : add target if exists
-        # XXX : add weights if exists
-        # XXX : add group if exists
+        kw = {'y': self.y_test, 'weights': self.weights_test, 
+                'groups': self.groups_test, 'fold': None}
         for ext in extensions:
-            self._dump(df_test, ext, 'test')
+            self._dump(df_test, 'test', ext, **kw)
         print_(self.logger, '\t\tTest shape\t[{}|{}]'.format(*df_test.shape))
 
     def cleaning(self, df):
@@ -338,6 +281,7 @@ class GenerateWrapper:
         infos = {
             "train_shape": self.train_shape,
             "test_shape": self.test_shape,
+            "project_params": self.params,
         }
         
         path = join(self.folder_path, "infos.pkl")

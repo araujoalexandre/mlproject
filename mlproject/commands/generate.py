@@ -5,6 +5,7 @@ from argparse import SUPPRESS
 from time import clock
 from inspect import isfunction
 from importlib import import_module
+from collections import Iterable
 
 import numpy as np
 
@@ -83,32 +84,24 @@ class Command(MlprojectCommand):
         define_params = functions.pop("define_params", None)
         create_dataset = functions.pop("create_dataset", None)
 
-        assert define_params, "Project scripts is not define correctly"
-        assert create_dataset, "Project scripts is not define correctly"
+        assert define_params is not None, "project.py is not define correctly"
+        assert create_dataset is not None, "project.py is not define correctly"
 
-        if define_params:
-            params = define_params()
-
-        gen = GenerateWrapper(params)
+        gen = GenerateWrapper(define_params())
 
         # get logger
         self.logger = gen.logger
 
-        # load attributes
-        gen.load_attributes()
-        
         # if seed is int convert to list
-        if isinstance(params.seed, int):
-            seeds = [params.seed]
-        else:
-            seeds = params.seed
+        if not isinstance(gen.params.seed, Iterable):
+            gen.params.seed = [gen.params.seed]
 
         # loop over seeds values
-        for i, seed_value in enumerate(seeds):
+        for i, seed_value in enumerate(gen.params.seed):
 
-            # create validqtion splits
-            gen.validation += [validation_splits(   params.n_folds, 
-                                                    gen.y_test,
+            # create validation splits
+            gen.validation += [validation_splits(   gen.params.n_folds, 
+                                                    gen.y_train,
                                                     seed_value
                                                 )]
             # Generate df_train & df_test
