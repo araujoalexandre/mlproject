@@ -31,13 +31,15 @@ def print_and_log(logger, string):
 
 class ProgressTable:
 
-    def __init__(self, logger=None, padding=14):
+    def __init__(self, logger=None, padding=13):
 
-        self.headers = ['FOLD', 'TRAIN', 'CV', 'START', 'END', 'DUR']
+        self.headers = ['SEED','FOLD','TRAIN','CV','START','END','DUR']
         self.len_title = len(self.headers)
         self.padding = padding
 
         self.logger = logger
+
+        self.initialize = True
 
     def _format_timedelta(self, timedeltaObj):
         """
@@ -58,15 +60,18 @@ class ProgressTable:
         print_and_log(self.logger, string)
         print_and_log(self.logger, self._line)
 
-    def score(self, fold, train, cv, start, end):
+    def score(self, seed, fold, train, cv, start, end):
         """
             print score and other info 
         """
-        if fold == 0: self._title()
-        if not isinstance(fold, int): print_and_log(self.logger, self._line)
+        if self.initialize: 
+            self._title()
+            self.initialize = False
+        if not isinstance(fold, int):
+            print_and_log(self.logger, self._line)
 
         dur = self._format_timedelta(end - start)
-        arr = [ fold, '{:.5f}'.format(train), '{:.5f}'.format(cv), 
+        arr = [ seed, fold, '{:.5f}'.format(train), '{:.5f}'.format(cv), 
                 start.strftime("%H:%M:%S"), end.strftime("%H:%M:%S"), dur]
         arr = ["|{x: ^{fill}}".format(x=x, fill=self.padding).format(x) 
                                                                 for x in arr]
