@@ -15,7 +15,6 @@ from mlproject.utils import init_log
 from mlproject.utils import project_path, ProjectPath
 from mlproject.utils import print_and_log as print_
 from mlproject.utils import ProgressTable
-from mlproject.utils import repeat_values, ncycles_with_copy
 
 
 # ask to add a comment for the batch of model maybe in the parameters files ?
