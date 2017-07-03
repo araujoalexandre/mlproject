@@ -17,6 +17,7 @@ from .functions import is_pandas
 from .functions import is_numpy
 from .functions import get_ext_cls
 from .functions import background 
+from .functions import format_timedelta
 
 from .project import make_directory
 from .project import find_project_file
@@ -42,6 +43,7 @@ __all__ = [
     'is_numpy',
     'get_ext_cls',
     'background',
+    'format_timedelta',
 
     'make_directory',
     'find_project_file',
