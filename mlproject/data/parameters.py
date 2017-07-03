@@ -3,6 +3,8 @@ from sklearn.ensemble import *
 from sklearn.neighbors import *
 from sklearn.linear_model import *
 from sklearn.naive_bayes import *
+from sklearn.kernel_ridge import *
+from sklearn.svm import *
 
 # Wrapper
 from mlproject.wrapper import LibFFMWrapper
