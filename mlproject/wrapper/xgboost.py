@@ -16,24 +16,16 @@ from mlproject.utils import make_directory
 class XGBoostWrapper(BaseWrapper):
 
 
-    def __init__(self, params):        
-
-        # XXX : check all params
-        self.name = 'XGBoost'  
-
+    def __init__(self, params):
+        self.name = 'XGBoost'
         self.booster = params['booster'].copy()
         self.predict_opt = params.get('predict_option')
         self.verbose = params.get('verbose', None)
-        # self._infer_task(params)
         self.models = []
         super(XGBoostWrapper, self).__init__(params)
 
-    # def _infer_task(self, params):
-    #     # XXX : do this function
-    #     self.task = 'binary'
-
     def _create_config_file(self, X_train_path, X_cv_path):
-        config_path = '{}/config.txt'.format(self.folder)
+        config_path = join(self.folder, "config.txt")
         with open(config_path, 'r') as f:
             f.write("task = train\n")
             for key, value in self.booster.items():
@@ -51,6 +43,8 @@ class XGBoostWrapper(BaseWrapper):
             Function to train a model
         """
         make_directory(self.folder)
+        # override label
+        xtr.set_label(ytr); xva.set_label(yva)
         self.booster['evals'] = [(xtr, 'train'), (xva, 'cv')]
         self.models += [xgb.train(self.params, xtr, **self.booster)]
         self._features_importance(fold)
@@ -107,34 +101,34 @@ class XGBoostWrapper(BaseWrapper):
             'cover':  get_score(fmap=fmap_name, importance_type='cover'),
         }
 
-        out = join(self.folder, 'seed_{}'.format(self.seed), "fscore")
-        make_directory(out)
+        folder = join(self.folder, 'seed_{}'.format(self.seed), "fscore")
+        make_directory(folder)
 
         for key, value in metrics.items():
-
             df = pd.DataFrame({ 'features': list(value.keys()), 
                                     key: list(value.values())})
             df.sort_values(by=key, ascending=True, inplace=True)
-            file = join(out, "{}_{}_{}.csv".format(self.name, key, fold))
+            file = join(folder, "{}_{}_{}.csv".format(self.name, key, fold))
             df.to_csv(file, index=False)
 
     def _dump_txt_model(self, fold):
         """ 
             make and dump model txt file
         """
-        out = join(self.folder, "seed_{}".format(self.seed), "dump_models")
-        make_directory(out)
-
         fmap_name = join(self.path, "features.map")
-        file_name = join(out, "{}_{}.txt".format(self.name, fold))
-        self.models[fold].dump_model(file_name, fmap=fmap_name, with_stats=True)
+        folder = join(self.folder, "seed_{}".format(self.seed), "dump_models")
+        filename = "{}_{}.txt".format(self.name, fold)
+        make_directory(folder)
+        out = join(folder, filename)
+        self.models[fold].dump_model(out, fmap=fmap_name, with_stats=True)
 
     def save_model(self):
         """
             save model as binary file
         """
         for i in range(len(self.models)):
-            out = join(self.folder, "seed_{}".format(self.seed), 
-                                "model_fold_{}.bin".format(i))
-            self.models[i].save_model(out)
+            folder = join(self.folder, "seed_{}".format(self.seed))
+            filename = "model_fold_{}.bin".format(i)
+            make_directory(folder)
+            self.models[i].save_model(join(folder, filename))
 
