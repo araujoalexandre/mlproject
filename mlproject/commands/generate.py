@@ -2,7 +2,7 @@ from os import getcwd, makedirs
 from os.path import join, exists, basename
 from sys import exit
 from argparse import SUPPRESS
-from time import clock
+from datetime import datetime
 from inspect import isfunction
 from importlib import import_module
 from collections import Iterable
@@ -15,6 +15,7 @@ from mlproject.api import GenerateWrapper
 from mlproject.utils import pickle_load
 from mlproject.utils import print_and_log as print_
 from mlproject.utils import current_folder
+from mlproject.utils import format_timedelta
 
 """
     this file use the GenerateWrapper API 
@@ -106,10 +107,11 @@ class Command(MlprojectCommand):
                                                 )]
             # Generate df_train & df_test
             print_(self.logger, "\ncreating train/test dataset")
-            start = clock()
+            start = datetime.now()
             df_train, df_test = create_dataset(gen.validation[i])
-            print_(self.logger, "train/test set done in {:.0}".format(clock() 
-                                                                    - start))
+            print_(self.logger, ("train/test set done in "
+                "{hours:02d}:{minutes:02d}:{seconds:02d}".format\
+                                (**format_timedelta(datetime.now() - start))))
 
             # XXX : df_train and df_test done
             # what about making the conformity test now 
