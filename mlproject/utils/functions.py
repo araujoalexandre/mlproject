@@ -13,6 +13,13 @@ from mlproject.utils.io import BaseIO
 
 # XXX : check if pandas is installed otherwise create dummy pandas class
 
+def format_timedelta(timedeltaObj):
+    totalSeconds = timedeltaObj.seconds
+    ret = {}
+    ret['days'] = timedeltaObj.days
+    ret['hours'], remainder = divmod(totalSeconds, 3600)
+    ret['minutes'], ret['seconds'] = divmod(remainder, 60)
+    return ret
 
 def background(func):
     def wrapper(*args, **kwargs):
