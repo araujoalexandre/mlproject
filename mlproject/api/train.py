@@ -8,7 +8,7 @@ from itertools import product
 
 import numpy as np
 
-from mlproject.api import BaseAPI
+from mlproject.api import BaseAPI, TransformAPI
 from mlproject.utils import get_ext_cls
 from mlproject.utils import pickle_load, pickle_dump
 from mlproject.utils import init_log
@@ -36,13 +36,14 @@ class TrainWrapper(BaseAPI):
         
         # function to compute the score
         self.metric = kwargs.get('metric')
-        
+
         # function to make submission file for Data Science Competi
         self.make_submit = kwargs.get('make_submit', None)
         
         # function for target procession
         self.target_preprocess = kwargs.get('target_preprocess', lambda x: x)
         self.target_postprocess = kwargs.get('target_postprocess', lambda x: x)
+        # super(TrainWrapper, self).__init__(self.target_preprocess)
         
         # print informations and progression table
         self.verbose = True
@@ -136,7 +137,6 @@ class TrainWrapper(BaseAPI):
         X_test = self._load_data_ext(path, ext)
         return X_test
 
-
     def models_loop(self, save_model=True):
         """
             training loop 
@@ -212,6 +212,10 @@ class TrainWrapper(BaseAPI):
                 gtr, gva = self.split_groups(tr_ix, va_ix)
                 xtr, xva = self.load_train(fold, seed, ext)
 
+                # target preprocess : transform the target
+                ytr = self.target_preprocess(ytr)
+                yva = self.target_preprocess(yva)
+
                 # train
                 start = datetime.now()
                 model.train(xtr, xva, ytr, yva, fold)
@@ -220,6 +224,11 @@ class TrainWrapper(BaseAPI):
                 # make prediction
                 ytr_hat = model.predict(xtr, fold=fold)
                 yva_hat = model.predict(xva, fold=fold)
+
+                # target postprocess : reverse the target transform 
+                ytr, yva = self.split_target(tr_ix, va_ix)
+                ytr_hat = self.target_postprocess(ytr_hat)
+                yva_hat = self.target_postprocess(yva_hat)
 
                 # score model
                 tr_error = metric(ytr, ytr_hat, weights=wtr, groups=gtr)
@@ -290,6 +299,10 @@ class TrainWrapper(BaseAPI):
 
             # prediction on test set from all fold model
             fold_preds = model.predict(xtest)
+            
+            # target postprocess : reverse the target transform 
+            fold_preds = self.target_postprocess(fold_preds)
+
             nclass = fold_preds.shape[1] // nfolds
 
             if nclass > 1:
@@ -304,8 +317,6 @@ class TrainWrapper(BaseAPI):
                 pickle_dump(test_stack, join(model.folder, "test_stack.pkl"))
 
                 if submit and hasattr(self, 'id_test'):
-
-                    print()
 
                     score_test = None
                     if self.y_test is not None:
