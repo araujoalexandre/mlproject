@@ -291,7 +291,7 @@ class TrainWrapper(BaseAPI):
 
         for enum, model in enumerate(self.fitted_models):
             
-            # extract seed
+            # extract file extension to use
             ext = model.ext
 
             # load test set
