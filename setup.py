@@ -19,11 +19,9 @@ setup(
     packages=find_packages(exclude=('docs', 'tests')),
     include_package_data=True,
     zip_safe=False,
-    
     entry_points={
         'console_scripts': ['mlproject = mlproject.cmdline:execute']
     },
-
     classifiers=[
         'Framework :: mlproject',
         'Development Status :: 3 - Alpha',
@@ -38,11 +36,6 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
-    
-    package_data={
-        'data': ['generate.py.tmpl', 'train.py.tmpl','parameters.py.tmpl'],
-    },
-
     install_requires=[
 
     ],
