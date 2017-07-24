@@ -75,7 +75,10 @@ class Command(MlprojectCommand):
         """
             Clean up model folder
         """
-        self.check_inside_project(getcwd())
+        self.path = getcwd()
+        if not self._inside_project(self.path): return
+
+        # self.check_inside_project(getcwd())
 
         if args.all:
             self._run_all(args)
