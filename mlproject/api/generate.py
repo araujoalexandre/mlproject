@@ -165,7 +165,7 @@ class GenerateWrapper(BaseAPI):
         kw = {'y': self.y_test, 'weights': self.weights_test, 
                 'groups': self.groups_test, 'fold': None}
         for ext in extensions:
-            self._dump(df_test, 'test', ext, **kw)
+            self._dump(df_test.values, 'test', ext, **kw)
         print_(self.logger, '\t\tTest shape\t[{}|{}]'.format(*df_test.shape))
 
     def cleaning(self, df):
@@ -209,7 +209,7 @@ class GenerateWrapper(BaseAPI):
         """
         params = self.params
         self.train_shape = df.shape
-        self.train_cols_name = df.columns
+        self.train_cols_name = list(df.columns)
 
         # if params.weights_train is not None and \
         #     params.weights_train in self.train_cols_name:
@@ -258,13 +258,19 @@ class GenerateWrapper(BaseAPI):
         error = False
 
         if self.train_shape[1] != self.test_shape[1]:
-            message = "shape of DataFrames not equal : train {}, test {}"
+            message = ("/!\ /!\ /!\ /!\ "
+                       "shape of DataFrames not equal : train {}, test {}"
+                       "/!\ /!\ /!\ /!\ ")
             shapes = [self.train_shape[1], self.test_shape[1]]
             print_(self.logger, message.format(*shapes))
             error = True
 
         if not np.array_equal(self.train_cols_name, self.test_cols_name):
-            print_(self.logger, "Columns of dataframes not equal")
+            message = ("/!\ /!\ /!\ /!\ "
+                       "Columns of dataframes not equal"
+                       "/!\ /!\ /!\ /!\ ")
+            print_(self.logger, message)
+            error = True
 
         if error:
             a = set(self.train_cols_name)
@@ -286,28 +292,6 @@ class GenerateWrapper(BaseAPI):
         
         path = join(self.folder_path, "infos.pkl")
         pickle_dump(infos, path)
-
-        # path = join(self.folder_path, "y.pkl")
-        # pickle_dump(self.y_true, path)
-        # if hasattr(self, 'weights_train'):
-        #     path = join(self.folder_path, "weights_train.pkl")
-        #     pickle_dump(self.weights_train, path)
-        # if hasattr(self, 'group_train'):
-        #     path = join(self.folder_path, "group_train.pkl")
-        #     pickle_dump(self.groups_train, path)
-
-        # if hasattr(self, 'target_test'):
-        #     path = join(self.folder_path, "y_test.pkl")
-        #     pickle_dump(self.target_test, path)
-        # if hasattr(self, 'id_test'):
-        #     path = join(self.folder_path, "id_test.pkl")
-        #     pickle_dump(self.id_test, path)
-        # if hasattr(self, 'weights_test'):
-        #     path = join(self.folder_path, "weights_test.pkl")
-        #     pickle_dump(self.weights_test, path)
-        # if hasattr(self, 'groups_test'):
-        #     path = join(self.folder_path, "groups_test.pkl")
-        #     pickle_dump(self.groups_test, path)
 
         path = join(self.folder_path, "validation.pkl")
         pickle_dump(self.validation, path)

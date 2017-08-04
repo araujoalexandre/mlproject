@@ -39,7 +39,7 @@ class Command(MlprojectCommand):
 
     def add_options(self, parser):
 
-        choices = ['xgb', 'npz', 'libsvm', 'pkl', 'libffm', 'custom']
+        choices = ['xgb', 'lgb', 'npz', 'libsvm', 'pkl', 'libffm']
         parser.add_argument(dest='extensions', choices=choices, nargs='+',
                             help='Dataset type(s) to generate') 
         parser.add_argument("--train", dest="train", action="store_true",
@@ -121,11 +121,18 @@ class Command(MlprojectCommand):
             gen.create_folder()
             # clean dataset
             df_train, df_test = gen.cleaning(df_train), gen.cleaning(df_test)
+            # assert (np.array_equal(df_train.columns, df_test.columns))
+
             # save infos
             gen.get_train_infos(df_train)
             gen.get_test_infos(df_test)
+
             # save and generate features map
             gen.create_feature_map()
+
+            # conformity tests between train and test before dumping train
+            if df_test is not None:
+                gen.conformity_test()
             
             # save train fold
             gen._save_train_fold(   self.extensions, 
@@ -133,10 +140,9 @@ class Command(MlprojectCommand):
                                     gen.validation[i], 
                                     seed_value)
 
-            # save test and do conformity tests between train and test
+            # save test 
             if df_test is not None:
                 gen._save_test(self.extensions, df_test)
-                gen.conformity_test()
 
         # save infos
         gen.save_infos()
