@@ -15,7 +15,9 @@ __author__
 
 import sys
 from os.path import join
-from logging import getLogger, basicConfig, INFO
+from inspect import isfunction
+# from logging import getLogger, basicConfig, INFO
+
 
 def init_log(path):
     f = open(join(path, 'logs.log'), 'a')
@@ -28,6 +30,20 @@ def print_and_log(logger, string):
     print(string, flush=True)
     logger.write("{}\n".format(str(string)))
     logger.flush()
+
+
+def pprint_dict(data, tab=0, out=''):
+    """recusive walk in dict, output dict as string"""
+    for key in sorted(data.keys()):
+        if isinstance(data[key], dict):
+            out = pprint_dict(data[key], tab=tab+1, out=out)
+            continue
+        strtab = '  '*tab
+        if isfunction(data[key]):
+            data[key] = data[key].__name__
+        out += '{}{}: {}\n'.format(strtab, key, data[key])
+    return out[:-1]
+
 
 class ProgressTable:
 

@@ -13,6 +13,13 @@ from mlproject.utils.io import BaseIO
 
 # XXX : check if pandas is installed otherwise create dummy pandas class
 
+
+def counter(a):
+    """
+        equiv to collection.Counter but faster
+    """
+    return pd.Series(a).value_counts().sort_index().values
+
 def format_timedelta(timedeltaObj):
     totalSeconds = timedeltaObj.seconds
     ret = {}

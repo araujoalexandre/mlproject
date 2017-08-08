@@ -18,13 +18,13 @@ class SklearnWrapper(BaseWrapper):
         self.name = self.model.__class__.__name__
         super(SklearnWrapper, self).__init__(params)
 
-    def train(self, X_train, X_cv, y_train, y_cv, fold):
+    def train(self, xtr, xva, ytr, yva, fold):
         """
             Function to train a model
         """
         self.models += [copy.copy(self.model)]
         self.models[fold].set_params(**self.params)
-        self.models[fold].fit(X_train, y_train)
+        self.models[fold].fit(xtr, ytr)
         make_directory(self.folder)
         self._features_importance(fold)
 
@@ -39,9 +39,9 @@ class SklearnWrapper(BaseWrapper):
         predictions = func_predict(X)
         if predictions.ndim == 1:
             predictions = predictions.reshape(-1, 1)
-        # if class == 2 ie. binary classification 
+        # if class == 2 => binary classification 
         if predictions.shape[1] == 2:
-            predictions = predictions[:, 1]
+            predictions = predictions[:, 1].reshape(-1, 1)
         return predictions
 
     def predict(self, X, fold=None):

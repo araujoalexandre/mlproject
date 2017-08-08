@@ -103,7 +103,8 @@ class Command(MlprojectCommand):
             # create validation splits
             gen.validation += [validation_splits(   gen.params.n_folds, 
                                                     gen.y_train,
-                                                    seed_value
+                                                    seed_value,
+                                                    gen.groups_train
                                                 )]
             # Generate df_train & df_test
             print_(self.logger, "\ncreating train/test dataset")
@@ -121,11 +122,9 @@ class Command(MlprojectCommand):
             gen.create_folder()
             # clean dataset
             df_train, df_test = gen.cleaning(df_train), gen.cleaning(df_test)
-            # assert (np.array_equal(df_train.columns, df_test.columns))
 
             # save infos
-            gen.get_train_infos(df_train)
-            gen.get_test_infos(df_test)
+            gen.get_train_infos(df_train); gen.get_test_infos(df_test);
 
             # save and generate features map
             gen.create_feature_map()

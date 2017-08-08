@@ -18,6 +18,7 @@ from .functions import is_numpy
 from .functions import get_ext_cls
 from .functions import background 
 from .functions import format_timedelta
+from .functions import counter
 
 from .project import make_directory
 from .project import find_project_file
@@ -44,6 +45,7 @@ __all__ = [
     'get_ext_cls',
     'background',
     'format_timedelta',
+    'counter',
 
     'make_directory',
     'find_project_file',

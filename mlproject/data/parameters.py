@@ -7,8 +7,8 @@ from sklearn.kernel_ridge import *
 from sklearn.svm import *
 
 # Wrapper
-from mlproject.wrapper import LibFFMWrapper
-from mlproject.wrapper import LiblinearWrapper
+# from mlproject.wrapper import LibFFMWrapper
+# from mlproject.wrapper import LiblinearWrapper
 from mlproject.wrapper import LightGBMWrapper
 from mlproject.wrapper import SklearnWrapper
 from mlproject.wrapper import XGBoostWrapper
@@ -52,22 +52,7 @@ def get_models_wrapper():
             'silent': 1,
         },
     }
-    models += [XGBoostWrapper(params)]
-
-    params = {
-        'ext': ext,
-        'predict_option': predict_option,
-        'booster': booster,
-        'params': {
-            'booster': 'gbtree',
-            'nthread': nthread,
-            'objective': 'binary:logistic',
-            'eval_metric': 'logloss',
-            'eta': 0.1,
-            'silent': 1,
-        },
-    }
-    models += [XGBoostWrapper(params)]
+    # models += [XGBoostWrapper(params)]
 
     ###############################################
     #####    Parameters space for LightGBM    #####
@@ -76,24 +61,24 @@ def get_models_wrapper():
         XXX
     """
     
-    # ext = 'libsvm'
+    ext = 'lgb'
+    booster = {
+        'early_stopping_rounds': 10, 
+        'verbose_eval': 1,
+    }
 
-    # params = {
-    #     'ext': ext,
-    #     'params': {
-    #         'application': 'regression',
-    #         'boosting': 'gbdt', 
-    #         'learning_rate': 0.01, 
-    #         'task': 'train',
-    #         'num_iterations': 20000,
-    #         'early_stopping_round': 30,
-    #         'metric': 'l2',
-    #         'max_depth': 13,
-    #         'feature_fraction': 1,
-    #         'lambda_l1': 1.7,
-    #     },
-    # }
-    # models += [LightgbmWrapper(params)]
+    params = {
+        'ext': ext,
+        'booster': booster,
+        'params': {
+            'num_iterations': 20000,
+            'application': 'binary',
+            'boosting': 'gbdt', 
+            'learning_rate': 0.1, 
+            'metric': 'binary_logloss',
+        },
+    }
+    models += [LightGBMWrapper(params)]
 
 
     ##################################################################

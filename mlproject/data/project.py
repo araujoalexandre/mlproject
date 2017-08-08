@@ -56,17 +56,17 @@ def define_params():
         id_train = 'id',
         id_test = 'id',
 
-        # name of the traget feature in the dataset or path to a pickle file
+        # name of the target feature in the dataset or path to a pickle file
         # or a numpy array 
         # explain about validation
         target_train = 'target',
         target_test = 'target',
 
-        # XXX
+        # set weights of instances
         weights_train = None,
         weights_test = None,
 
-        # XXX
+        # set group size / query size (used for ranking)
         groups_train = None,
         groups_test = None,
 
@@ -118,13 +118,13 @@ def validation_splits(nfold, y, seed, groups=None):
         Define the vaidation strategy here !
     """
 
-    # gkf = GroupKFold(n_splits=fold)
+    # gkf = GroupKFold(n_splits=nfold)
     # split = list(gkf.split(y, y, groups=groups))
 
     skf = StratifiedKFold(n_splits=nfold, shuffle=True, random_state=seed)
     split = list(skf.split(y, y))
 
-    # kf = KFold(n_splits=fold, shuffle=True, random_state=seed)
+    # kf = KFold(n_splits=nfold, shuffle=True, random_state=seed)
     # split = list(kf.split(y, y))
 
     return split

@@ -2,21 +2,21 @@
     utils functions for pickle package
 """
 from os.path import isfile, splitext
-from pickle import load, dump
+import _pickle as pickle
 
 def pickle_load(path):
     """
         function to load pickle object
     """
     with open(path, 'rb') as f:
-        return load(f)
+        return pickle.load(f, encoding='latin1')
 
 def _pickle_dump(file, path):
     """
         function to dump picke object
     """
     with open(path, 'wb') as f:
-        dump(file, f, -1)
+        pickle.dump(file, f, -1)
 
 def _get_new_name(path):
     """

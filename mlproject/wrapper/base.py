@@ -16,8 +16,8 @@ class BaseWrapper:
         self.folder = join(self.path, name)
 
         # XXX : check all params
-        self.params = params.pop('params')
-        self.ext = params.pop('ext')
+        self.params = params['params'].copy()
+        self.ext    = params.pop('ext')
         self.n_jobs = params.get('n_jobs', -1)
 
         self.task = None

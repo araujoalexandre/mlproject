@@ -4,11 +4,12 @@
 """
 import os
 from os.path import join
-from contextlib import redirect_stdout, redirect_stderr
+from multiprocessing import cpu_count 
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 import numpy as np
 from xgboost import DMatrix
+from lightgbm import Dataset
 from sklearn.datasets import dump_svmlight_file, load_svmlight_file
 from pandas import DataFrame
 from .pkl import pickle_dump, pickle_load
@@ -38,15 +39,38 @@ class DMatrixIO(BaseIO):
     def ext(self):
         return "xgb"
 
-    def save(self, save_path, X, y=None, *args, **kwargs):        
+    def save(self, save_path, X, y=None, *args, **kwargs):
+
         weights = kwargs.get('weights', None)
+        groups  = kwargs.get('groups', None)
         missing = kwargs.get('missing', np.nan)
-        dxgb = DMatrix(X, y, missing=missing, weight=weights)
-        dxgb.save_binary(save_path)
+        dmat = DMatrix(X, y, missing=missing, weight=weights, 
+                                nthread=cpu_count())
+        if groups is not None:
+            dmat.set_group(groups)
+        dmat.save_binary(save_path)
 
     def load(self, path):
         dmat = DMatrix(path, silent=True)
         return dmat
+
+
+class LightGBMIO(BaseIO):
+
+    @property
+    def ext(self):
+        return "lgb"
+
+    def save(self, save_path, X, y=None, *args, **kwargs):        
+        weights = kwargs.get('weights', None)
+        groups = kwargs.get('groups', None)
+        lgb_dataset = Dataset(X, label=None, weight=weights, group=groups,
+                                 silent=True, free_raw_data=False)
+        lgb_dataset.save_binary(save_path)
+
+    def load(self, path):
+        lgb_dataset = Dataset(path, silent=True).construct()
+        return lgb_dataset
 
 
 class pickleIO(BaseIO):

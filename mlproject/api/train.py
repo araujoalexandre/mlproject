@@ -1,6 +1,7 @@
 """
     train wrapper
 """
+import gc
 from os.path import join, exists
 from datetime import datetime
 from copy import deepcopy
@@ -15,6 +16,7 @@ from mlproject.utils import init_log
 from mlproject.utils import project_path, ProjectPath
 from mlproject.utils import print_and_log as print_
 from mlproject.utils import ProgressTable
+from mlproject.utils import counter
 
 
 # ask to add a comment for the batch of model maybe in the parameters files ?
@@ -115,7 +117,7 @@ class TrainWrapper(BaseAPI):
             splits based on validation index 
         """
         if self.groups_train is not None:
-            return self.groups_train[tr_ix], self.groups_train[va_ix]
+            gtr, gva = self.groups_train[tr_ix], self.groups_train[va_ix]
         return None, None
 
     def load_train(self, fold, seed, ext):
@@ -246,6 +248,9 @@ class TrainWrapper(BaseAPI):
 
                 # update progress table
                 progress.score(seed, fold, tr_error, va_error, start, end)
+
+                del ytr, yva, wtr, wva, gtr, gva, xtr, xva
+                gc.collect()
 
             # timer
             end_loop = datetime.now()

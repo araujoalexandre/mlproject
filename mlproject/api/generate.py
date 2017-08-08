@@ -27,6 +27,7 @@ from mlproject.utils import init_log
 from mlproject.utils import pickle_load, pickle_dump
 from mlproject.utils import make_directory
 from mlproject.utils import get_ext_cls
+from mlproject.utils import counter
 
 
 # XXX : get and save the shapes of train and test files in project folder ??
@@ -104,7 +105,8 @@ class GenerateWrapper(BaseAPI):
             split groups array based on train and cv index
         """
         if self.groups_train is not None:
-            return self.groups_train[tr_index], self.groups_train[cv_index]
+            gtr, gva = self.groups_train[tr_index], self.groups_train[cv_index]
+            return counter(gtr), counter(gva)
         return None, None
 
     def _split_data(self, df, tr_index, cv_index):
@@ -207,7 +209,7 @@ class GenerateWrapper(BaseAPI):
         """
             get infos for train set
         """
-        params = self.params
+        # params = self.params
         self.train_shape = df.shape
         self.train_cols_name = list(df.columns)
 
@@ -223,24 +225,24 @@ class GenerateWrapper(BaseAPI):
         """
             get infos for test set
         """
-        params = self.params
+        # params = self.params
         self.test_shape = df.shape
         self.test_cols_name = list(df.columns)
 
-        if params.target_test is not None:
-            self.target_test = self._load_target
+        # if params.target_test is not None:
+        #     self.target_test = self._load_target
         
-        if params.id_test is not None and \
-            params.id_test in self.test_cols_name:
-            self.id_test = df[params.id_test].values
+        # if params.id_test is not None and \
+        #     params.id_test in self.test_cols_name:
+        #     self.id_test = df[params.id_test].values
         
-        if params.weights_test is not None and \
-            params.weights_test in self.test_cols_name:
-            self.weights_test = df[params.weights_test].values
+        # if params.weights_test is not None and \
+        #     params.weights_test in self.test_cols_name:
+        #     self.weights_test = df[params.weights_test].values
 
-        if params.groups_test is not None and \
-            params.groups_test in self.test_cols_name:
-            self.groups_test = df[params.groups_test].values
+        # if params.groups_test is not None and \
+        #     params.groups_test in self.test_cols_name:
+        #     self.groups_test = df[params.groups_test].values
 
     def create_feature_map(self):
         """
