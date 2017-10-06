@@ -6,7 +6,7 @@ __file__
 __description__
 
     Class wrapper for generate file
-    
+
 __author__
 
     Araujo Alexandre < aaraujo001@gmail.com >
@@ -37,13 +37,14 @@ class GenerateWrapper(BaseAPI):
     def __init__(self, params):
 
         self.params = params
-        self.project = ProjectPath(params.project_path) 
+        self.project = ProjectPath(params.project_path)
 
         # self.train_index, self.cv_index = None, None
         self.train_shape, self.test_shape = (None, None), (None, None)
 
         self.date = datetime.now()
-        self.folder_name = "models_{date:%Y.%m.%d_%H.%M}".format(date=self.date)
+        self.folder_name = "models_{date:%Y.%m.%d_%H.%M}".format(
+            date=self.date)
         self.folder_path = join(self.project.models(), self.folder_name)
 
         self.validation = []
@@ -72,13 +73,14 @@ class GenerateWrapper(BaseAPI):
             'seed': self.params.seed,
             'n_folds': self.params.n_folds,
         }
-        message = ( "\n### START ###\n\n{date:%Y.%m.%d %H.%M}"
-                    "\nFolder : {folder}\n"
-                    "\nPARAMS\n"
-                    "NAN_VALUE\t{missing}\n"
-                    "FOLDS\t\t{n_folds}\n"
-                    "SEED\t\t{seed}"
-                )
+        message = (
+            "\n### START ###\n\n{date:%Y.%m.%d %H.%M}"
+            "\nFolder : {folder}\n"
+            "\nPARAMS\n"
+            "NAN_VALUE\t{missing}\n"
+            "FOLDS\t\t{n_folds}\n"
+            "SEED\t\t{seed}"
+            )
         print_(self.logger, message.format(**args_msg))
 
     def _split_target(self, tr_index, cv_index):
@@ -95,7 +97,7 @@ class GenerateWrapper(BaseAPI):
         """
         # XXX : add check over self.train_index and self.cv_index
         # XXX : add check over self.weights => dim
-                    
+
         if self.weights_train is not None:
             return self.weights_train[tr_index], self.weights_train[cv_index]
         return None, None
@@ -119,7 +121,8 @@ class GenerateWrapper(BaseAPI):
 
         return df.loc[tr_index].values, df.loc[cv_index].values
 
-    def _dump(self, X, name, ext, y=None, weights=None, groups=None, fold=None):
+    def _dump(self, X, name, ext, y=None, weights=None, groups=None,
+              fold=None):
         """
             save X, y and weights in the right format
         """
@@ -134,9 +137,11 @@ class GenerateWrapper(BaseAPI):
 
         path = join(path, 'X_{}.{}'.format(name, ext))
         cls = get_ext_cls()[ext]
-        cls.save(path, X, y, weights=weights, 
-                             groups=groups, 
-                             missing=self.params.missing)
+        cls.save(
+            path, X, y,
+            weights=weights,
+            groups=groups,
+            missing=self.params.missing)
 
     def _save_train_fold(self, extensions, df_train, validation, seed_value):
         """
@@ -157,22 +162,27 @@ class GenerateWrapper(BaseAPI):
                 self._dump(xva, 'va_{}'.format(seed_value), ext, **kwva)
 
             message = ('Fold {}/{}\tTrain shape\t[{}|{}]\tCV shape\t[{}|{}]')
-            print_(self.logger, message.format(fold+1, len(validation), 
-                                                    *xtr.shape, *xva.shape))
+            print_(self.logger, message.format(
+                                            fold+1, 
+                                            len(validation),
+                                            *xtr.shape, 
+                                            *xva.shape))
 
     def _save_test(self, extensions, df_test):
         """
             save test set
         """
-        kw = {'y': self.y_test, 'weights': self.weights_test, 
-                'groups': self.groups_test, 'fold': None}
+        kw = {
+            'y': self.y_test, 'weights': self.weights_test,
+            'groups': self.groups_test, 'fold': None
+            }
         for ext in extensions:
             self._dump(df_test.values, 'test', ext, **kw)
         print_(self.logger, '\t\tTest shape\t[{}|{}]'.format(*df_test.shape))
 
     def cleaning(self, df):
         """
-            Remove  target features 
+            Remove  target features
                     id features
             fill nan values
         """
@@ -199,10 +209,10 @@ class GenerateWrapper(BaseAPI):
             if col and col in df.columns:
                 todrop.append(col)
         df.drop(todrop, axis=1, inplace=True)
-        
+
         # fillna
         # df.fillna(self.params.missing, inplace=True)
-        
+
         return df
 
     def get_train_infos(self, df):
@@ -231,11 +241,11 @@ class GenerateWrapper(BaseAPI):
 
         # if params.target_test is not None:
         #     self.target_test = self._load_target
-        
+
         # if params.id_test is not None and \
         #     params.id_test in self.test_cols_name:
         #     self.id_test = df[params.id_test].values
-        
+
         # if params.weights_test is not None and \
         #     params.weights_test in self.test_cols_name:
         #     self.weights_test = df[params.weights_test].values
@@ -246,7 +256,7 @@ class GenerateWrapper(BaseAPI):
 
     def create_feature_map(self):
         """
-            function to create features mapping for 
+            function to create features mapping for
             XGBoost features importance
         """
         with open(join(self.folder_path, "features.map"), 'w') as f:
@@ -280,7 +290,7 @@ class GenerateWrapper(BaseAPI):
             diff_cols = a.symmetric_difference(b)
             for name in diff_cols:
                 print_(self.logger, "{}".format(name))
-    
+
     def save_infos(self):
         """
             save infos and files for training step
@@ -291,7 +301,7 @@ class GenerateWrapper(BaseAPI):
             "test_shape": self.test_shape,
             "project_params": self.params,
         }
-        
+
         path = join(self.folder_path, "infos.pkl")
         pickle_dump(infos, path)
 

@@ -24,19 +24,19 @@ class XGBoostWrapper(BaseWrapper):
         self.models = []
         super(XGBoostWrapper, self).__init__(params)
 
-    def _create_config_file(self, X_train_path, X_cv_path):
-        config_path = join(self.folder, "config.txt")
-        with open(config_path, 'r') as f:
-            f.write("task = train\n")
-            for key, value in self.booster.items():
-                f.write("{} = {}\n".format(key, value))
-            f.write('\n')
-            for key, value in self.params:
-                f.write("{} = {}\n".format(key, value))
-            f.write("data = {}".format(X_train_path))
-            f.write("eval[cv] = {}".format(X_cv_path))
-            f.write("save_period = 1")
-            f.write("model_dir = {}".format(self.folder))
+    # def _create_config_file(self, X_train_path, X_cv_path):
+    #     config_path = join(self.folder, "config.txt")
+    #     with open(config_path, 'r') as f:
+    #         f.write("task = train\n")
+    #         for key, value in self.booster.items():
+    #             f.write("{} = {}\n".format(key, value))
+    #         f.write('\n')
+    #         for key, value in self.params:
+    #             f.write("{} = {}\n".format(key, value))
+    #         f.write("data = {}".format(X_train_path))
+    #         f.write("eval[cv] = {}".format(X_cv_path))
+    #         f.write("save_period = 1")
+    #         f.write("model_dir = {}".format(self.folder))
 
     def _train(self, xtr, xva, ytr, yva, fold):
         """
@@ -54,7 +54,7 @@ class XGBoostWrapper(BaseWrapper):
         if self.predict_opt is None:
             # ntree_limit = 0
             # best iter as default
-            ntree_limit = model_predict.best_iteration
+            ntree_limit = model_predict.best_ntree_limit
         elif isinstance(self.predict_opt, str):
             ntree_limit = {
                 'best_ntree_limit': model_predict.best_ntree_limit, 
@@ -74,13 +74,13 @@ class XGBoostWrapper(BaseWrapper):
             function to make and return prediction
         """
         if fold is None:
-            prediction = np.zeros((dmat.num_row(), 0))
+            stack_preds = np.zeros((dmat.num_row(), 0))
             for i in range(len(self.models)):
-                prediction = np.hstack((prediction, 
-                            self._predict_with_option(self.models[i], dmat)))
-        if isinstance(fold, int):
-            prediction = self._predict_with_option(self.models[fold], dmat)
-        return prediction
+                preds = self._predict_with_option(self.models[i], dmat)
+                stack_preds = np.hstack((stack_preds, preds))
+        elif isinstance(fold, int):
+            stack_preds = self._predict_with_option(self.models[fold], dmat)
+        return stack_preds
 
     def _features_importance(self, fold):
         """
@@ -109,7 +109,7 @@ class XGBoostWrapper(BaseWrapper):
                                     key: list(value.values())})
             df.sort_values(by=key, ascending=True, inplace=True)
             file = join(folder, "{}_{}_{}.csv".format(self.name, key, fold))
-            df.to_csv(file, index=False)
+            df[['features', key]].to_csv(file, index=False)
 
     def _dump_txt_model(self, fold):
         """ 

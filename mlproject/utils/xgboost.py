@@ -4,7 +4,7 @@
 from functools import partial
 import numpy as np
 
-__all__ = ['FairObj', 'HuberObj']
+__all__ = ['FairObj', 'HuberObj', 'GiniObj']
 
 def FairObj(preds, dtrain, c=2):
     labels = dtrain.get_label()
@@ -42,3 +42,15 @@ def HuberObj(preds, dtrain, delta=2):
         grad.append(g)
         hess.append(h)
     return grad, hess
+
+def GiniObj(pred, y):
+
+    def gini(y, pred):
+        g = np.asarray(np.c_[y, pred, np.arange(len(y)) ], dtype=np.float)
+        g = g[np.lexsort((g[:,2], -1*g[:,1]))]
+        gs = g[:,0].cumsum().sum() / g[:,0].sum()
+        gs -= (len(y) + 1) / 2.
+        return gs / len(y)
+
+    y = y.get_label()
+    return 'gini', gini(y, pred) / gini(y, y)

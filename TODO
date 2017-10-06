@@ -1,0 +1,24 @@
+
+
+
+create the wrapper LightGBM => avce Pickle file => deal with groups and weights
+be more memory efficient => option --save_memory
+predict on test at the end of training model instead of the end of the pipeline 
+
+check feature distribution of dataset and warn if distrubution is really different 
+
+
+build a binary format in C++ called with python 
+
+
+Re-code LibFFM
+Re-code RandomForest
+Re-code ExtraTrees 
+Plug XGBoost 
+Plug LigbtGBM
+Plug Liblinear
+
+Make a C++ pipeline exclusively in C++
+=> mlproject train will be coded in C++
+
+    => 

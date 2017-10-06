@@ -52,7 +52,7 @@ def get_models_wrapper():
             'silent': 1,
         },
     }
-    # models += [XGBoostWrapper(params)]
+    models += [XGBoostWrapper(params)]
 
     ###############################################
     #####    Parameters space for LightGBM    #####
@@ -61,24 +61,24 @@ def get_models_wrapper():
         XXX
     """
     
-    ext = 'lgb'
-    booster = {
-        'early_stopping_rounds': 10, 
-        'verbose_eval': 1,
-    }
+    # ext = 'lgb'
+    # booster = {
+    #     'early_stopping_rounds': 10, 
+    #     'verbose_eval': 1,
+    # }
 
-    params = {
-        'ext': ext,
-        'booster': booster,
-        'params': {
-            'num_iterations': 20000,
-            'application': 'binary',
-            'boosting': 'gbdt', 
-            'learning_rate': 0.1, 
-            'metric': 'binary_logloss',
-        },
-    }
-    models += [LightGBMWrapper(params)]
+    # params = {
+    #     'ext': ext,
+    #     'booster': booster,
+    #     'params': {
+    #         'num_iterations': 20000,
+    #         'application': 'binary',
+    #         'boosting': 'gbdt', 
+    #         'learning_rate': 0.1, 
+    #         'metric': 'binary_logloss',
+    #     },
+    # }
+    # models += [LightGBMWrapper(params)]
 
 
     ##################################################################
@@ -88,50 +88,50 @@ def get_models_wrapper():
         XXX
     """
 
-    n_estimators = 1000
+    n_estimators = 250
     n_jobs = 12
-    ext = 'npz'
+    ext = 'pkl'
 
     # params = {
     #     'model': RandomForestClassifier(),
-    #     'n_jobs': n_jobs,
     #     'ext': ext,
     #     'params': {
     #         'n_estimators': n_estimators,
     #         'criterion': 'entropy',
+    #         'n_jobs': n_jobs,
     #     },
     # }
     # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': ExtraTreesClassifier(),
-    #     'n_jobs': n_jobs,
     #     'ext': ext,
     #     'params': {
     #         'n_estimators': n_estimators,
     #         'criterion': 'entropy',
+    #         'n_jobs': n_jobs,
     #     },
     # }
     # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': RandomForestClassifier(),
-    #     'n_jobs': n_jobs,
     #     'ext': ext,
     #     'params': {
     #         'n_estimators': n_estimators,
     #         'criterion': 'gini',
+    #         'n_jobs': n_jobs,
     #     },
     # }
     # models += [SklearnWrapper(params)]
 
     # params = {
     #     'model': ExtraTreesClassifier(),
-    #     'n_jobs': n_jobs,
     #     'ext': ext,
     #     'params': {
     #         'n_estimators': n_estimators,
     #         'criterion': 'gini',
+    #         'n_jobs': n_jobs,
     #     },
     # }
     # models += [SklearnWrapper(params)]
@@ -328,8 +328,3 @@ def get_models_wrapper():
     # models += [LibFFMWrapper(params)]
 
     return models
-
-
-
-
-

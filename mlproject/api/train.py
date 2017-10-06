@@ -31,22 +31,21 @@ class TrainWrapper(BaseAPI):
 
         # path of the model folder
         self.path = path
-        self.project = ProjectPath(project_path(self.path)) 
-        
+        self.project = ProjectPath(project_path(self.path))
+
         # list of all the Wrappers with initilized with parameters
         self.models_wrapper = models_wrapper
-        
+
         # function to compute the score
         self.metric = kwargs.get('metric')
 
-        # function to make submission file for Data Science Competi
+        # function to make submission file for Data Science Competition
         self.make_submit = kwargs.get('make_submit', None)
-        
+
         # function for target procession
         self.target_preprocess = kwargs.get('target_preprocess', lambda x: x)
         self.target_postprocess = kwargs.get('target_postprocess', lambda x: x)
-        # super(TrainWrapper, self).__init__(self.target_preprocess)
-        
+
         # print informations and progression table
         self.verbose = True
 
@@ -68,7 +67,7 @@ class TrainWrapper(BaseAPI):
 
     def _load_data(self):
         """
-            function to load important data files : 
+            function to load important data files :
                 id [train/test]
                 y  [train/test]
                 weights [train/test]
@@ -78,8 +77,8 @@ class TrainWrapper(BaseAPI):
         if exists(join(self.path, "infos.pkl")):
             infos = pickle_load(join(self.path, "infos.pkl"))
         self.train_shape = infos.pop("train_shape", None)
-        self.test_shape  = infos.pop("test_shape", None)
-        self.params      = infos.pop("project_params", None)
+        self.test_shape = infos.pop("test_shape", None)
+        self.params = infos.pop("project_params", None)
 
         self._load_id()
         self._load_target()
@@ -104,8 +103,8 @@ class TrainWrapper(BaseAPI):
 
     def split_weights(self, tr_ix, va_ix):
         """
-            if weights exists, Load and return weights 
-            splits based on validation index 
+            if weights exists, Load and return weights
+            splits based on validation index
         """
         if self.weights_train is not None:
             return self.weights_train[tr_ix], self.weights_train[va_ix]
@@ -113,8 +112,8 @@ class TrainWrapper(BaseAPI):
 
     def split_groups(self, tr_ix, va_ix):
         """
-            if weights exists, Load and return weights 
-            splits based on validation index 
+            if weights exists, Load and return weights
+            splits based on validation index
         """
         if self.groups_train is not None:
             gtr, gva = self.groups_train[tr_ix], self.groups_train[va_ix]
@@ -141,7 +140,7 @@ class TrainWrapper(BaseAPI):
 
     def models_loop(self, save_model=True):
         """
-            training loop 
+            training loop
         """
         verbose = self.verbose
         train_shape = self.train_shape
@@ -152,7 +151,7 @@ class TrainWrapper(BaseAPI):
         # container for fitted models
         self.fitted_models = []
 
-        # print startup message 
+        # print startup message
         if verbose:
             self._startup_message()
 
@@ -162,10 +161,12 @@ class TrainWrapper(BaseAPI):
         prev_model_id = None
         self.models_id = [x for x in range(len(self.models_wrapper))]
 
-        loop = product(enumerate(self.models_wrapper), 
-                        enumerate(self.params.seed))
+        loop = product(
+                    enumerate(self.models_wrapper),
+                    enumerate(self.params.seed)
+                    )
         for enum, ((model_id, model), (seed_id, seed)) in enumerate(loop):
-            
+
             # save wrapper for test prediction
             self.fitted_models += [deepcopy(model)]
             model = self.fitted_models[-1]
@@ -189,11 +190,12 @@ class TrainWrapper(BaseAPI):
                 train_stack = None
                 # bagged scores
                 all_scores_tr, all_scores_va = [], []
-                # write header msg 
+                # write header msg
                 if verbose:
-                    print_(self.logger, '')
-                    print_(self.logger, model_name)
-                    print_(self.logger, model) # print model params
+                    print_(self.logger, model._print_params())
+                    # print_(self.logger, '')
+                    # print_(self.logger, model_name)
+                    # print_(self.logger, model)  # print model params
                     # init a new progress table
                     progress = ProgressTable(self.logger)
 
@@ -206,7 +208,8 @@ class TrainWrapper(BaseAPI):
             # timer
             start_loop = datetime.now()
             # start training loop
-            for fold, (tr_ix, va_ix) in enumerate(self.validation[enum%nseed]):
+            for fold, (tr_ix, va_ix) in enumerate(
+                                        self.validation[enum % nseed]):
 
                 # load y, weights, train
                 ytr, yva = self.split_target(tr_ix, va_ix)
@@ -222,12 +225,12 @@ class TrainWrapper(BaseAPI):
                 start = datetime.now()
                 model.train(xtr, xva, ytr, yva, fold)
                 end = datetime.now()
-                
+
                 # make prediction
                 ytr_hat = model.predict(xtr, fold=fold)
                 yva_hat = model.predict(xva, fold=fold)
 
-                # target postprocess : reverse the target transform 
+                # target postprocess : reverse the target transform
                 ytr, yva = self.split_target(tr_ix, va_ix)
                 ytr_hat = self.target_postprocess(ytr_hat)
                 yva_hat = self.target_postprocess(yva_hat)
@@ -243,7 +246,7 @@ class TrainWrapper(BaseAPI):
                 # fill train stacking dataset
                 if train_stack is None:
                     train_stack = np.zeros((train_shape[0], yva_hat.shape[1]))
-                # accumulate probabilities 
+                # accumulate probabilities
                 train_stack[va_ix, :] += yva_hat
 
                 # update progress table
@@ -260,28 +263,32 @@ class TrainWrapper(BaseAPI):
             progress.score('/', '/', mean_tr, mean_va, start_loop, end_loop)
 
             # compute total score
-            model.score = metric(   self.y_train, 
-                                    (train_stack / (seed_id+1)), 
-                                    weights=self.weights_train, 
-                                    groups=self.groups_train)
+            model.score = metric(
+                            self.y_train,
+                            (train_stack / (seed_id+1)),
+                            weights=self.weights_train,
+                            groups=self.groups_train
+                            )
 
             # end of bagged model
             if enum % nseed == (nseed - 1):
-                
+
                 # averaging probabilities
                 train_stack /= nseed
 
                 if verbose:
-                    stats = [np.std(all_scores_va), np.var(all_scores_va)] 
+                    stats = [np.std(all_scores_va), np.var(all_scores_va)]
                     diff = model.score - np.mean(all_scores_va)
                     # print infos
-                    msg = ( "score on average train oof : {:.5f}\n"
-                            "validation stats : std : {:.5f}, var : {:.5}\n"
-                            "diff (train_oof - mean valid) : {:.5f}\n")
+                    msg = (
+                        "score on average train oof : {:.5f}\n"
+                        "validation stats : std : {:.5f}, var : {:.5}\n"
+                        "diff (train_oof - mean valid) : {:.5f}\n"
+                        )
                     print_(self.logger, msg.format(model.score, *stats, diff))
 
                 pickle_dump(train_stack, join(model_folder, "train_stack.pkl"))
-            
+
             if save_model:
                 model.save_model()
 
@@ -295,7 +302,7 @@ class TrainWrapper(BaseAPI):
         nseed = len(self.params.seed)
 
         for enum, model in enumerate(self.fitted_models):
-            
+
             # extract file extension to use
             ext = model.ext
 
@@ -304,8 +311,8 @@ class TrainWrapper(BaseAPI):
 
             # prediction on test set from all fold model
             fold_preds = model.predict(xtest)
-            
-            # target postprocess : reverse the target transform 
+
+            # target postprocess : reverse the target transform
             fold_preds = self.target_postprocess(fold_preds)
 
             nclass = fold_preds.shape[1] // nfolds
@@ -325,12 +332,11 @@ class TrainWrapper(BaseAPI):
 
                     score_test = None
                     if self.y_test is not None:
-                        score_test = metric(self.y_test,
-                                            test_stack, 
-                                            weights=self.weights_train, 
+                        score_test = metric(self.y_test, test_stack,
+                                            weights=self.weights_train,
                                             groups=self.groups_train)
 
                     score_test = score_test or 0.0
-                    args = [model.path, self.id_test, test_stack, 
-                            model.name, model.date, model.score, score_test]
-                    self.make_submit(*args)
+                    args = []
+                    self.make_submit(model.folder, self.id_test, test_stack,
+                            model.name, model.date, model.score, score_test)

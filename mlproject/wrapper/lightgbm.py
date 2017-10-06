@@ -1,132 +1,99 @@
 
-import os, re, copy
-from subprocess import Popen, PIPE
-import numpy as np
+from os.path import join, exists
+from contextlib import redirect_stdout
+from subprocess import Popen, PIPE, STDOUT
 import pandas as pd
+import numpy as np
+import lightgbm as lgb
 
 from .base import BaseWrapper
-from mlproject.utils import load_features_name, make_directory
+from mlproject.utils import make_directory, load_features_name
 
 
 class LightGBMWrapper(BaseWrapper):
 
-    def __init__(self, params, paths):
-
+    def __init__(self, params):
         self.name = 'LightGBM'
-        self.file_ext = 'XXX'
+        self.booster = params['booster'].copy()
+        self.params = params['params'].copy()
+        self.models = []
+        super(LightGBMWrapper, self).__init__(params)
 
-        self.params_booster = params.get('booster')
-        self.exec_path = os.environ['LIGHTGBM']
-        self.name = "LightGBM"
-        self.verbose = params['params'].get('verbose')
-        self.predict_increment = 0
-
-        super(LightGBMWrapper, self).__init__(params, paths)
-
-
-    def train(self, X_train, X_cv, y_train, y_cv, fold):
+    def _train(self, xtr, xva, ytr, yva, fold):
         """
-            xxx
+            Function to train a model
         """
+        make_directory(self.folder)
+        if not isinstance(xtr, lgb.Dataset) or not isinstance(xva, lgb.Dataset):
+            xtr = lgb.Dataset(xtr, ytr)
+            xva = lgb.Dataset(xva, yva)
+        else:
+            # override label
+            xtr.set_label(ytr); xva.set_label(yva)
+        self.models += [lgb.train(self.params, xtr, valid_sets=xtr, **self.booster)]
+        self._features_importance(fold)
+        self._dump_txt_model(fold)
 
-        make_directory(self.model_folder)
-
-        args = [self.folder_path, fold]
-        train_path = "{}/Fold_{}/X_train.libsvm".format(*args)
-        cv_path = "{}/Fold_{}/X_cv.libsvm".format(*args)
-
-        self.params['task'] = 'train'
-        self.params['data'] = train_path
-        self.params['valid'] = cv_path
-
-        out = '{}/LightGBM_model_{}.txt'.format(self.model_folder, self.fold)
-        self.params['model_out'] = out
-
-        config = '{}/train.config'.format(self.model_folder)
-        with open(config, 'w') as f:
-            for key, value in self.params.items():
-                f.write('{}={}\n'.format(key, value))
-
-        cmd = [self.exec_path, "config={}".format(config)]
-        process = Popen(cmd,stdout=PIPE, bufsize=1).communicate()
-
-        with open(self.params['model_out'], mode='r') as file:
-            self.model = file.read()
-
-
-    def predict(self, X, cv=False):
+    def predict(self, data, fold=None):
         """
-            xxx
+            function to make and return prediction
         """
+        if fold is None:
+            prediction = np.zeros((data.num_data(), 0))
+            for i in range(len(self.models)):
+                gbm = self.models[i]
+                best_iter = gbm.best_iteration
+                fold_prediction = gbm.predict(data, num_iteration=best_iter)
+                prediction = np.hstack((prediction, fold_prediction))
+        if isinstance(fold, int):
+            gbm = self.models[fold]
+            prediction = gbm.predict(data, num_iteration=gbm.best_iteration)
+        return prediction
 
-        if self.dataset == 'train':
-            args = [self.folder_path, self.fold]
-            if self.predict_increment == 0:
-                predict_filepath = "{}/Fold_{}/X_train.libsvm".format(*args)
-                self.predict_increment += 1
-            elif self.predict_increment == 1:
-                predict_filepath = "{}/Fold_{}/X_cv.libsvm".format(*args)
-                self.predict_increment = 0
-        elif self.dataset == 'test':
-            predict_filepath = "{}/Test/X_test.libsvm".format(self.folder_path)
-
-        if path is not None:
-            predict_filepath = path
-
-        args = [self.model_folder, self.fold]
-        input_model = "{}/LightGBM_model_{}.txt".format(*args)
-        output_results = "{}/LightGBM_preds_{}.txt".format(*args)
-
-        predict_params = ["task=predict\n",
-                          "data={}\n".format(predict_filepath),
-                          "input_model={}\n".format(input_model),
-                          "output_result={}\n".format(output_results)]
-
-        config = '{}/predict.config'.format(self.model_folder)
-        with open(config, 'w') as f:
-            f.writelines(predict_params)
-
-        cmd = [self.exec_path, "config={}".format(config)]
-        process = Popen(cmd, stdout=PIPE, bufsize=1).communicate()
-
-        prections = np.loadtxt(output_results, dtype=float)
-        return prections
-
-
-    def _feature_importance(self, importance_type='weight'):
+    def _features_importance(self, fold):
         """Get feature importance of each feature.
-        Importance type can be defined as:
-        'weight' - the number of times a feature is used to split the data
-        'gain' - the average gain of the feature when it is used in trees
-        'cover' - the average coverage of the feature when it is used in trees
-        
-        Parameters
-        ----------
-        importance_type: string
-            The type of feature importance
+        importance_type : str, default "split"
+            How the importance is calculated: "split" or "gain"
+            "split" is the number of times a feature is used in a model
+            "gain" is the total gain of splits which use the feature
         """
-        fmap_name = "{}/features.map".format(self.folder_path)
-        features_name = load_features_name(fmap_name)
+        feat_names = load_features_name(join(self.path, "features.map"))
+        func = self.models[fold].feature_importance
+        metrics = {
+            'split': func(importance_type='split'),
+            'gain': func(importance_type='gain'),
+        }
 
-        match = re.findall("Column_(\d+)=(\d+)", self.model)
-        importance = match.values()
+        folder = join(self.folder, 'seed_{}'.format(self.seed), "fscore")
+        make_directory(folder)
 
-        df = pd.DataFrame({ 
-                    'features':features_name, 
-                    'fscore':importance,
-                })
+        for metric, values in metrics.items():
+            df = pd.DataFrame({ 'features': feat_names, 
+                                  metric: list(values) })
+            df.sort_values(by=metric, ascending=True, inplace=True)
+            file = join(folder, "{}_{}_{}.csv".format(self.name, metric, fold))
+            df.to_csv(file, index=False)
 
-        df.sort_values(by='fscore', ascending=True, inplace=True)
-        args_name = [self.model_folder, self.name, self.fold]
-        name = "{}/{}_fscore_{}.csv".format(*args_name)
-        df.to_csv(name, index=False)
-
-    
-    @property
-    def get_model(self):
+    def _dump_txt_model(self, fold):
+        """ 
+            make and dump model txt file
         """
-            xxx
+        folder = join(self.folder, "seed_{}".format(self.seed), "dump_models")
+        filename = "{}_{}.txt".format(self.name, fold)
+        make_directory(folder)
+        out = join(folder, filename)
+        self.models[fold].save_model(out)
+
+    def save_model(self):
         """
-        model = copy.copy(self)
-        model.dataset = 'test'
-        return model
+            save model as binary file
+        """
+        pass
+
+
+
+
+
+
+
+

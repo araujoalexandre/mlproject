@@ -3,4 +3,3 @@ include LICENSE
 include MANIFEST.in
 include mlproject/VERSION
 recursive-include tests *
-global-exclude __pycache__ *.py[cod]
