@@ -5,10 +5,10 @@ from importlib import import_module
 from inspect import isfunction
 
 from mlproject.commands import MlprojectCommand
-from mlproject.api import TrainWrapper
-from mlproject.utils import parent_folder
-from mlproject.utils import print_and_log as print_
-from mlproject.utils import background
+from mlproject.api.train import TrainWrapper
+from mlproject.utils.project import parent_folder
+from mlproject.utils.log import print_and_log as print_
+from mlproject.utils.functions import background
 
 
 # XXX : print info about size (Go) of model_folder
@@ -29,8 +29,8 @@ class Command(MlprojectCommand):
 
     def _inside_train_folder(self, path):
         if not parent_folder(path) == "models":
-            print("this command needs to be "\
-                            "executed from inside a training folder")
+            print("this command needs to be "
+                    "executed from inside a training folder")
             return False
         return True
 
@@ -51,14 +51,12 @@ class Command(MlprojectCommand):
 
     def _run_in_prompt(self, cls_train):
         #XXX : get thoses params from args
-        cls_train.models_loop(save_model=True)
-        cls_train.predict_test(compute_score=False, submit=True)
+        cls_train.train_predict(submit=True, save_model=True)
 
     @background
     def _run_in_background(self, cls_train):
         #XXX : get thoses params from args
-        cls_train.models_loop(save_model=True)
-        cls_train.predict_test(compute_score=False, submit=True)
+        cls_train.train_predict(submit=True, save_model=True)
 
     def run(self, args):
         """
@@ -78,5 +76,4 @@ class Command(MlprojectCommand):
         if args.background:
             self._run_in_background(cls_train)
         else:
-            # sys.stdout = None
             self._run_in_prompt(cls_train)

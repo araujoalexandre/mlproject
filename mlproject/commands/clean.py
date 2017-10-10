@@ -5,7 +5,7 @@ from glob import glob
 
 import mlproject
 from mlproject.commands import MlprojectCommand
-from mlproject.utils import find_project_file
+from mlproject.utils.project import find_project_file
 
 class Command(MlprojectCommand):
 

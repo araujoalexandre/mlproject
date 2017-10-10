@@ -5,17 +5,15 @@ from argparse import SUPPRESS
 from datetime import datetime
 from inspect import isfunction
 from importlib import import_module
-from collections import Iterable
 
 import numpy as np
 
-import mlproject
 from mlproject.commands import MlprojectCommand
-from mlproject.api import GenerateWrapper
-from mlproject.utils import pickle_load
-from mlproject.utils import print_and_log as print_
-from mlproject.utils import current_folder
-from mlproject.utils import format_timedelta
+from mlproject.api.generate import GenerateWrapper
+from mlproject.utils.serialization import pickle_load
+from mlproject.utils.log import print_and_log as print_
+from mlproject.utils.project import current_folder
+from mlproject.utils.functions import format_timedelta
 
 """
     this file use the GenerateWrapper API 
@@ -38,7 +36,6 @@ class Command(MlprojectCommand):
         return "generate and save dataset for training"
 
     def add_options(self, parser):
-
         choices = ['xgb', 'lgb', 'npz', 'libsvm', 'pkl', 'libffm']
         parser.add_argument(dest='extensions', choices=choices, nargs='+',
                             help='Dataset type(s) to generate') 
@@ -63,15 +60,11 @@ class Command(MlprojectCommand):
         return functions
 
     def _extract_args(self, args):
-        """
-            convert args from argsparse as class attributes
-        """
+        """convert args from argsparse as class attributes"""
         self.extensions = args.extensions
 
     def run(self, args):
-        """
-            Generate dataset for training
-        """
+        """Generate dataset for training"""
         self.path = getcwd()
 
         if not self._inside_project(self.path): return
@@ -93,12 +86,8 @@ class Command(MlprojectCommand):
         # get logger
         self.logger = gen.logger
 
-        # if seed is int convert to list
-        if not isinstance(gen.params.seed, Iterable):
-            gen.params.seed = [gen.params.seed]
-
         # loop over seeds values
-        for i, seed_value in enumerate(gen.params.seed):
+        for i, seed_value in enumerate(gen.params.seeds):
 
             # create validation splits
             gen.validation += [validation_splits(   gen.params.n_folds, 
@@ -124,7 +113,8 @@ class Command(MlprojectCommand):
             df_train, df_test = gen.cleaning(df_train), gen.cleaning(df_test)
 
             # save infos
-            gen.get_train_infos(df_train); gen.get_test_infos(df_test);
+            gen.get_infos('train', df_train)
+            gen.get_infos('test', df_test)
 
             # save and generate features map
             gen.create_feature_map()
@@ -141,7 +131,7 @@ class Command(MlprojectCommand):
 
             # save test 
             if df_test is not None:
-                gen._save_test(self.extensions, df_test)
+                gen._save_test(self.extensions, df_test, seed_value)
 
         # save infos
         gen.save_infos()

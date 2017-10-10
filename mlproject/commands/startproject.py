@@ -3,9 +3,11 @@ from os.path import join, exists, abspath
 from sys import exit
 from datetime import datetime
 from pkgutil import get_data
+from argparse import SUPPRESS
 
 from mlproject.commands import MlprojectCommand
-from mlproject.utils import make_directory
+from mlproject.utils.project import make_directory
+from mlproject.utils.unit_test import make_binary_dataset
 
 # XXX : load default scripts dynamically 
 TEMPLATES_SCRIPTS = [
@@ -27,6 +29,8 @@ class Command(MlprojectCommand):
         parser.add_argument("project_name", help="name of the project")
         parser.add_argument("project_dir",  nargs='?', default=getcwd(),
                                  help="directory of the project")
+        parser.add_argument("--debug", action='store_true', default=False, 
+                                help=SUPPRESS)
 
     def _save_file(self, file, path):
         with open(path, "wb") as f:
@@ -43,9 +47,8 @@ class Command(MlprojectCommand):
         if not exists(project_path):
             makedirs(project_path)
         else:
-            # use Raise instead
             print("Folder already exists")
-            exit(1)
+            raise SystemExit
 
         # create config file
         date = datetime.now()
@@ -67,9 +70,13 @@ class Command(MlprojectCommand):
             file = get_data('mlproject', join('data', template))
             self._save_file(file, join(project_path, 'code', template))
 
-        print("New project {} created ".format(project_name))
-        print("   {}\n".format(project_path))
-        print("   Put your train & test set in the data/raw/ folder")
-        print("   Update the files bellow in the code folder :")
+        if args.debug:
+            make_binary_dataset(project_path)
+            print("New project {} in debug mode created".format(project_name))
+        else:
+            print("New project {} created ".format(project_name))
+            print("   {}\n".format(project_path))
+            print("   Put your train & test set in the data/raw/ folder")
+            print("   Update the files bellow in the code folder :")
         for file in TEMPLATES_SCRIPTS:
             print("     - {}".format(file))
