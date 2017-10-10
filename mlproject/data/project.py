@@ -4,10 +4,7 @@
 from os import getcwd
 from glob import glob
 from os.path import join, dirname, basename
-from mlproject.utils import ParametersSpace
-from mlproject.utils import project_path
-from mlproject.utils import ProjectPath
-from mlproject.utils import pickle_load
+from itertools import product, combinations
 
 import numpy as np
 import pandas as pd
@@ -29,6 +26,10 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import matthews_corrcoef
 from sklearn.metrics import average_precision_score
+
+from mlproject.utils.parameters import ParametersSpace
+from mlproject.utils.project import ProjectPath, project_path
+from mlproject.utils.serialization import pickle_load
 
 load = [ 'define_params', 'create_dataset', 'validation_splits', 'metric',
     'make_submit', 'target_preprocess', 'target_postprocess' ]
@@ -74,7 +75,7 @@ def define_params():
         n_folds = 5,
 
         # seed value for the project
-        seed = 123456,
+        seeds = 123456,
 
         # value to fill for nan value in dataset
         missing = -1,
@@ -88,6 +89,25 @@ def define_params():
 """
     XXX
 """
+
+def target_encoding(df_train, df_test, splits, name_feature, cols, group_limit=5, target='target'):
+    feature = 'target_encoding__{}'.format(name_feature)
+    for tr_ix, va_ix in splits:
+        # make mapper
+        mapper = df_train.loc[tr_ix].groupby(name_feature)[target].agg(['mean', 'count'])
+        mapper = mapper[mapper['count'] > group_limit]['mean'].copy()        
+        # map proba to feature value
+        df_train.loc[va_ix, feature] = df_train.loc[va_ix][name_feature].map(mapper)
+    # make mapper with all training set
+    mapper = df_train.groupby(name_feature)[target].agg(['mean', 'count'])
+    mapper = mapper[mapper['count'] > group_limit]['mean'].copy()   
+    # map proba to feature value
+    df_test[feature] = df_test[name_feature].map(mapper)
+    # fillna with mean
+    fill_value = df_train[feature].mean()
+    df_train[feature].fillna(fill_value, inplace=True)
+    df_test[feature].fillna(fill_value, inplace=True)
+    return df_train, df_test
 
 def create_dataset(splits):
     """

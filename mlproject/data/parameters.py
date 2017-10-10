@@ -9,9 +9,9 @@ from sklearn.svm import *
 # Wrapper
 # from mlproject.wrapper import LibFFMWrapper
 # from mlproject.wrapper import LiblinearWrapper
-from mlproject.wrapper import LightGBMWrapper
-from mlproject.wrapper import SklearnWrapper
-from mlproject.wrapper import XGBoostWrapper
+from mlproject.wrapper.lightgbm import LightGBMWrapper
+from mlproject.wrapper.sklearn import SklearnWrapper
+from mlproject.wrapper.xgboost import XGBoostWrapper
 
 
 #################################################
@@ -32,7 +32,6 @@ def get_models_wrapper():
 
     ext = 'xgb'
     nthread = 12
-    predict_option = 'best_ntree_limit'
     booster = {
         'num_boost_round': 20000, 
         'early_stopping_rounds': 10, 
@@ -41,7 +40,6 @@ def get_models_wrapper():
 
     params = {
         'ext': ext,
-        'predict_option': predict_option,
         'booster': booster,
         'params': {
             'booster': 'gbtree',

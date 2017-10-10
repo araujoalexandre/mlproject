@@ -9,8 +9,7 @@ from pkgutil import iter_modules
 
 import mlproject
 from mlproject.commands import MlprojectCommand
-from mlproject.utils import find_project_file
-from mlproject.utils import inside_project
+from mlproject.utils.project import find_project_file, inside_project
 
 
 def _get_project_settings(inproject):
