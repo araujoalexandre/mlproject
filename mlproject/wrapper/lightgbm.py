@@ -2,12 +2,14 @@
 from os.path import join, exists
 from contextlib import redirect_stdout
 from subprocess import Popen, PIPE, STDOUT
+
 import pandas as pd
 import numpy as np
 import lightgbm as lgb
 
-from .base import BaseWrapper
-from mlproject.utils import make_directory, load_features_name
+from mlproject.wrapper.base import BaseWrapper
+from mlproject.utils.project import make_directory
+from mlproject.utils.functions import load_features_name
 
 
 class LightGBMWrapper(BaseWrapper):

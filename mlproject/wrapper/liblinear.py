@@ -1,9 +1,11 @@
 
 import multiprocessing, copy
+
 import liblinear
 import liblinearutil as ll
-from .base import BaseWrapper
-from kaggle.utils.functions import make_directory
+
+from mlproject.wrapper.base import BaseWrapper
+from mlproject.utils.functions import make_directory
 
 
 class LiblinearWrapper(BaseWrapper):

@@ -6,8 +6,8 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from .base import BaseWrapper
-from mlproject.utils import make_directory
+from mlproject.wrapper.base import BaseWrapper
+from mlproject.utils.project import make_directory
 
 
 class LibFFMWrapper(BaseWrapper):

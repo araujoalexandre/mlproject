@@ -4,9 +4,10 @@ from os.path import join
 import numpy as np
 import pandas as pd
 
-from .base import BaseWrapper
-from mlproject.utils import load_features_name, make_directory
-from mlproject.utils import pickle_dump
+from mlproject.wrapper.base import BaseWrapper
+from mlproject.utils.project import make_directory
+from mlproject.utils.functions import load_features_name
+from mlproject.utils.serialization import pickle_dump
 
 
 class SklearnWrapper(BaseWrapper):
@@ -28,15 +29,15 @@ class SklearnWrapper(BaseWrapper):
         make_directory(self.folder)
         self._features_importance(fold)
 
-    def _predict(self, model, X):
+    def _predict(self, data, model_id, X):
         """
             function to make and return prediction
         """
-        if hasattr(model, 'predict_proba'):
-            func_predict = model.predict_proba
+        if hasattr(self.model[model_id], 'predict_proba'):
+            func_predict = self.model[model_id].predict_proba
         else:
-            func_predict = model.predict
-        predictions = func_predict(X)
+            func_predict = self.model[model_id].predict
+        predictions = func_predict(data)
         if predictions.ndim == 1:
             predictions = predictions.reshape(-1, 1)
         # if class == 2 => binary classification 
@@ -44,17 +45,26 @@ class SklearnWrapper(BaseWrapper):
             predictions = predictions[:, 1].reshape(-1, 1)
         return predictions
 
-    def predict(self, X, fold=None):
+    def predict(self, data, fold=None):
         """
             function to make and return prediction
         """
-        if fold is None:
-            predictions = np.zeros((len(X), 0))
-            for i in range(len(self.models)):
-                predictions = np.hstack((predictions, 
-                                    self._predict(self.models[i], X)))
+        # predict for train and cv         
         if isinstance(fold, int):
-            predictions = self._predict(self.models[fold], X)
+            predictions = self._predict(data, fold)
+        # prediction on test dataset
+        # predict with all models from different fold and average predictions
+        elif fold is None:
+            for model_id in range(len(self.models)):
+                if model_id == 0:
+                    predictions = self._predict(data, model_id) 
+                else:
+                    predictions += self._predict(data, model_id)
+            # average predictions
+            predictions /= len(self.models)
+        # reshape predicitons if dim == 1
+        if predictions.ndim == 1:
+            predictions = predictions.reshape(-1, 1)        
         return predictions
 
     def _features_importance(self, fold):

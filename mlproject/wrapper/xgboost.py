@@ -6,8 +6,8 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 
-from .base import BaseWrapper
-from mlproject.utils import make_directory
+from mlproject.wrapper.base import BaseWrapper
+from mlproject.utils.project import make_directory
 
 
 # XGB with Python Interface
@@ -19,24 +19,10 @@ class XGBoostWrapper(BaseWrapper):
     def __init__(self, params):
         self.name = 'XGBoost'
         self.booster = params['booster'].copy()
-        self.predict_opt = params.get('predict_option')
+        # self.predict_opt = params.get('predict_option')
         self.verbose = params.get('verbose', None)
         self.models = []
         super(XGBoostWrapper, self).__init__(params)
-
-    # def _create_config_file(self, X_train_path, X_cv_path):
-    #     config_path = join(self.folder, "config.txt")
-    #     with open(config_path, 'r') as f:
-    #         f.write("task = train\n")
-    #         for key, value in self.booster.items():
-    #             f.write("{} = {}\n".format(key, value))
-    #         f.write('\n')
-    #         for key, value in self.params:
-    #             f.write("{} = {}\n".format(key, value))
-    #         f.write("data = {}".format(X_train_path))
-    #         f.write("eval[cv] = {}".format(X_cv_path))
-    #         f.write("save_period = 1")
-    #         f.write("model_dir = {}".format(self.folder))
 
     def _train(self, xtr, xva, ytr, yva, fold):
         """
@@ -50,37 +36,31 @@ class XGBoostWrapper(BaseWrapper):
         self._features_importance(fold)
         self._dump_txt_model(fold)
 
-    def _predict_with_option(self, model_predict, dmat):
-        if self.predict_opt is None:
-            # ntree_limit = 0
-            # best iter as default
-            ntree_limit = model_predict.best_ntree_limit
-        elif isinstance(self.predict_opt, str):
-            ntree_limit = {
-                'best_ntree_limit': model_predict.best_ntree_limit, 
-                'best_iteration': model_predict.best_iteration, 
-                'best_score': model_predict.best_score, 
-            }[self.predict_opt]
-        elif isinstance(self.predict_opt, int):
-            ntree_limit = self.predict_opt
-        # prediction
-        preds = model_predict.predict(dmat, ntree_limit=ntree_limit)
-        if preds.ndim == 1:
-            preds = preds.reshape(-1, 1)
-        return preds
-
-    def predict(self, dmat, fold=None):
+    def predict(self, data, fold=None):
         """
             function to make and return prediction
         """
-        if fold is None:
-            stack_preds = np.zeros((dmat.num_row(), 0))
+        # predict for train and cv
+        if isinstance(fold, int):
+            iter_ = self.models[fold].best_ntree_limit
+            predictions = self.models[fold].predict(data, ntree_limit=iter_)
+        # prediction on test dataset
+        # predict with all models from different fold and average predictions
+        elif fold is None:
             for i in range(len(self.models)):
-                preds = self._predict_with_option(self.models[i], dmat)
-                stack_preds = np.hstack((stack_preds, preds))
-        elif isinstance(fold, int):
-            stack_preds = self._predict_with_option(self.models[fold], dmat)
-        return stack_preds
+                best_ntree_limit = self.models[i].best_ntree_limit
+                if i == 0:
+                    predictions = self.models[i].predict(data, 
+                                                ntree_limit=best_ntree_limit)
+                else:
+                    predictions += self.models[i].predict(data, 
+                                                ntree_limit=best_ntree_limit)
+            # average predictions
+            predictions /= len(self.models)
+        # reshape predicitons if dim == 1
+        if predictions.ndim == 1:
+            predictions = predictions.reshape(-1, 1)        
+        return predictions
 
     def _features_importance(self, fold):
         """
