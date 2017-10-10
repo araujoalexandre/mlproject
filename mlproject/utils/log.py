@@ -16,7 +16,6 @@ __author__
 import sys
 from os.path import join
 from inspect import isfunction
-# from logging import getLogger, basicConfig, INFO
 
 
 def init_log(path):
@@ -24,9 +23,7 @@ def init_log(path):
     return f
 
 def print_and_log(logger, string):
-    """
-        print and log string
-    """
+    """print and log string"""
     print(string, flush=True)
     logger.write("{}\n".format(str(string)))
     logger.flush()
@@ -58,17 +55,13 @@ class ProgressTable:
         self.initialize = True
 
     def _format_timedelta(self, timedeltaObj):
-        """
-            Convert timedelta Object to date string
-        """
+        """Convert timedelta Object to date string"""
         s = timedeltaObj.total_seconds()
         arr = [int(s // 3600), int(s % 3600 // 60), int(s % 60)]
         return '{:02d}:{:02d}:{:02d}'.format(*arr)
 
     def _title(self):
-        """
-            print table headers
-        """
+        """print table headers"""
         arr = ["|{x: ^{fill}}".format(x=x, fill=self.padding).format(x) 
                                                           for x in self.headers]
         string = "".join(arr) + "|"
@@ -77,9 +70,7 @@ class ProgressTable:
         print_and_log(self.logger, self._line)
 
     def score(self, seed, fold, train, cv, start, end):
-        """
-            print score and other info 
-        """
+        """print score and other info """
         if self.initialize: 
             self._title()
             self.initialize = False
@@ -97,7 +88,5 @@ class ProgressTable:
 
     @property
     def _line(self):
-        """
-            print line of score table in training
-        """
+        """print line of score table in training"""
         return "-" * (self.padding * self.len_title + self.len_title + 1)

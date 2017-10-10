@@ -23,8 +23,11 @@ class ParametersSpace:
         assert self.n_folds     , "Parameters are not configured correctly"
 
         # optional parameters with default parameters
-        self.seed          = kwargs.pop('seed', 0)
+        self.seeds         = kwargs.pop('seeds', 0)
         self.missing       = kwargs.pop('missing', np.nan)
+
+        if isinstance(self.seeds, int):
+            self.seeds = [self.seeds]
 
         # optional parameters
         self.test_name     = kwargs.get('test_name')

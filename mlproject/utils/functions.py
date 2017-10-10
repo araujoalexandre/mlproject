@@ -5,6 +5,7 @@ import os
 import sys
 import inspect
 from importlib import import_module
+from collections import Iterable
 
 import pandas as pd
 import numpy as np
@@ -13,11 +14,14 @@ from mlproject.utils.io import BaseIO
 
 # XXX : check if pandas is installed otherwise create dummy pandas class
 
+def gen_zip(*args):
+    assert all([isinstance(arg, Iterable) for arg in args])
+    assert len(set([len(arg) for arg in args])) == 1
+    for i, (values) in enumerate(zip(*args)):
+        yield i, values
 
 def counter(a):
-    """
-        equiv to collection.Counter but faster
-    """
+    """equiv to collection.Counter but faster"""
     return pd.Series(a).value_counts().sort_index().values
 
 def format_timedelta(timedeltaObj):
@@ -39,9 +43,7 @@ def background(func):
     return wrapper
 
 def load_features_name(path):
-    """
-        load features map file
-    """
+    """load features map file"""
     features_name = []
     with open(path, 'r') as f:
         while True:
@@ -52,15 +54,11 @@ def load_features_name(path):
     return features_name
 
 def is_pandas(df):
-    """
-        check if df is a pandas DataFrame
-    """
-    return isinstance(df, pd.DataFrame)
+    """check if df is a pandas DataFrame"""
+    return isinstance(df, pd.DataFrame, pd.Series)
 
 def is_numpy(df):
-    """
-        check if df is a numpy array
-    """
+    """check if df is a numpy array"""
     return isinstance(df, np.ndarray)
 
 def get_ext_cls():

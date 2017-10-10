@@ -2,17 +2,17 @@
 """
     wrapper class for loading and saving 
 """
-import os
 from os.path import join
 from multiprocessing import cpu_count 
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 from xgboost import DMatrix
 from lightgbm import Dataset
 from sklearn.datasets import dump_svmlight_file, load_svmlight_file
 from pandas import DataFrame
-from .pkl import pickle_dump, pickle_load
+
+from mlproject.utils.serialization import pickle_dump, pickle_load
 
 
 class BaseIO:
@@ -80,7 +80,7 @@ class pickleIO(BaseIO):
         return "pkl"
 
     def save(self, save_path, X, y=None, *args, **kwargs):
-        pickle_dump(X, save_path)
+        pickle_dump(X, save_path, force=True)
 
     def load(self, path):
         return pickle_load(path)
