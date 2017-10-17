@@ -25,21 +25,24 @@ from mlproject.utils.functions import is_pandas, is_numpy
 from mlproject.utils.project import ProjectPath, make_directory
 from mlproject.utils.log import print_and_log as print_, init_log
 from mlproject.utils.serialization import pickle_load, pickle_dump
+from mlproject.utils.functions import format_timedelta
 
 
 class GenerateWrapper(BaseAPI):
 
-    def __init__(self, params):
+    def __init__(self, parameters, functions, extensions):
 
-        self.params = params
-        self.project = ProjectPath(params.project_path)
+        self.functions = functions
+        self.params = parameters
+        self.extensions = extensions
+
+        self.project = ProjectPath(parameters.project_path)
 
         # self.train_index, self.cv_index = None, None
         self.train_shape, self.test_shape = (None, None), (None, None)
 
         self.date = datetime.now()
-        self.folder_name = "models_{date:%Y.%m.%d_%H.%M}".format(
-            date=self.date)
+        self.folder_name = "models_{:%Y.%m.%d_%H.%M}".format(self.date)
         self.folder_path = join(self.project.models(), self.folder_name)
 
         self.validation = []
@@ -50,7 +53,7 @@ class GenerateWrapper(BaseAPI):
         self.logger = init_log(getcwd())
         self._print_params()
 
-    def create_folder(self):
+    def _create_folder(self):
         """function to make the folder"""
         path = join(self.project.models(), self.folder_name)
         make_directory(path)
@@ -148,7 +151,7 @@ class GenerateWrapper(BaseAPI):
                 weights=self.weights_test, groups=self.groups_test, fold=None)
         print_(self.logger, '\t\tTest shape\t[{}|{}]'.format(*df_test.shape))
 
-    def cleaning(self, df):
+    def _cleaning(self, df):
         """Remove target, id, group and weights features"""
         # remove space in columns names and convert to str
         features = list(df.columns)
@@ -173,18 +176,18 @@ class GenerateWrapper(BaseAPI):
         df.drop(todrop, axis=1, inplace=True)
         return df
 
-    def get_infos(self, dataset, df):
+    def _get_infos(self, dataset, df):
         """get infos from DataFrame"""
         setattr(self, '{}_shape'.format(dataset), df.shape)
         setattr(self, '{}_cols_name'.format(dataset), list(df.columns))
 
-    def create_feature_map(self):
+    def _create_feature_map(self):
         """create features mapping for XGBoost features importance"""
         with open(join(self.folder_path, "features.map"), 'w') as f:
             for i, feat in enumerate(self.train_cols_name):
                 f.write('{0}\t{1}\tq\n'.format(i, feat))
 
-    def conformity_test(self):
+    def _conformity_test(self):
         """check if columns match between train and test"""
         error = False
         
@@ -210,7 +213,7 @@ class GenerateWrapper(BaseAPI):
             for name in diff_cols:
                 print_(self.logger, "{}".format(name))
 
-    def save_infos(self):
+    def _save_infos(self):
         """save infos and files for training step"""
         print_(self.logger, "Dumping Info")
         infos = {
@@ -225,10 +228,72 @@ class GenerateWrapper(BaseAPI):
         path = join(self.folder_path, "validation.pkl")
         pickle_dump(self.validation, path)
 
-    def copy_script(self):
+    def _copy_script(self):
         """backup dataset.py in folder model"""
         # XXX load thoses files dynamically
         for script_name in ["project.py", "parameters.py"]:
             source = join(self.project.code(), script_name)
             destination = join(self.folder_path, script_name)
             copyfile(source, destination)
+
+    def create_dataset(self, validation_index):
+        """execute create_dataset function from project.py"""
+        # Generate df_train & df_test
+        print_(self.logger, "\ncreating train/test dataset")
+        start = datetime.now()
+        df_train, df_test = self.functions['create_dataset'](validation_index)
+        print_(self.logger, 
+            ("train/test set done in {hours:02d}:{minutes:02d}:{seconds:02d}"
+                ).format(**format_timedelta(datetime.now() - start)))
+
+        # save infos
+        self._get_infos('train', df_train)
+        self._get_infos('test', df_test)
+
+        # clean dataset
+        df_train = self._cleaning(df_train)
+        df_test = self._cleaning(df_test)
+
+        # conformity tests between train and test before dumping train
+        if df_test is not None:
+            self._conformity_test()
+
+        return df_train, df_test
+
+    def generate_project(self):
+        """loop over seeds values, create validation splits and 
+        execute feature engineerring from project.py"""
+
+        # loop over seeds values
+        for i, seed_value in enumerate(self.params.seeds):
+
+            # create validation splits
+            self.validation += [self.functions['validation_splits'](
+                                            self.params.n_folds, 
+                                            self.y_train,
+                                            seed_value,
+                                            self.groups_train
+                                            )]
+
+            df_train, df_test = self.create_dataset(self.validation[-1])
+
+            # create folder
+            self._create_folder()
+
+            # save and generate features map
+            self._create_feature_map()
+            
+            # save train fold
+            self._save_train_fold(   
+                self.extensions, 
+                df_train, 
+                self.validation[-1], 
+                seed_value)
+
+            # save test 
+            if df_test is not None:
+                self._save_test(self.extensions, df_test, seed_value)
+
+        # save infos
+        self._save_infos()
+        self._copy_script()

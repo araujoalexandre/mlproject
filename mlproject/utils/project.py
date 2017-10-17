@@ -1,7 +1,19 @@
 from glob import glob
 from os import makedirs, pardir
 from os.path import abspath, basename, join, dirname, exists, isdir
+from inspect import isfunction
+from importlib import import_module
 
+
+def load_project_functions():
+    """load functions from project.py and return a dict"""
+    mod = import_module('project')
+    functions = {}
+    func_list = vars(mod)['load']
+    for func in vars(mod).values():
+        if isfunction(func) and func.__name__ in func_list:
+            functions[func.__name__] = func
+    return functions
 
 def make_directory(path):
     """check if folder exist, if doesn't exist create it"""
