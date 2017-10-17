@@ -265,7 +265,7 @@ class GenerateWrapper(BaseAPI):
         execute feature engineerring from project.py"""
 
         # loop over seeds values
-        for i, seed_value in enumerate(self.params.seeds):
+        for seed_value in self.params.seeds:
 
             # create validation splits
             self.validation += [self.functions['validation_splits'](
