@@ -11,11 +11,6 @@ from mlproject.utils.serialization import pickle_load
 from mlproject.utils.log import print_and_log as print_
 from mlproject.utils.project import current_folder, load_project_functions
 
-# XXX : Check if dataset got object features
-# XXX : time dataset generation for train and test
-# XXX : print info about nan values
-# XXX : possiliboty de run the training after the generation process
-# XXX : option to clean up after succesfull training
 
 class Command(MlprojectCommand):
 
@@ -49,9 +44,9 @@ class Command(MlprojectCommand):
         if not self._inside_code_folder(self.path): return
         
         functions = load_project_functions()
-        parameters = functions['define_params']()
-
         GenerateWrapper(
-            parameters, 
-            functions, 
-            args.extensions).generate_project()
+                functions['define_params'](),
+                functions['create_dataset'],
+                functions['validation_splits'],
+                args.extensions
+            ).generate_project()
