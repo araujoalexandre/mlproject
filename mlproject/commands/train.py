@@ -6,7 +6,7 @@ from inspect import isfunction
 
 from mlproject.commands import MlprojectCommand
 from mlproject.api.train import TrainWrapper
-from mlproject.utils.project import parent_folder
+from mlproject.utils.project import parent_folder, load_project_functions
 from mlproject.utils.log import print_and_log as print_
 from mlproject.utils.functions import background
 
@@ -34,16 +34,6 @@ class Command(MlprojectCommand):
             return False
         return True
 
-    def _load_functions(self):
-        mod = import_module('project')
-        functions = {}
-        func_list = vars(mod)['load']
-        for func in vars(mod).values():
-            if isfunction(func) and \
-                func.__name__ in func_list:
-                functions[func.__name__] = func
-        return functions
-
     def _load_wrappers(self):
         mod = import_module('parameters')
         wrappers = mod.get_models_wrapper()
@@ -65,7 +55,7 @@ class Command(MlprojectCommand):
         self.path = getcwd()
         self._inside_train_folder(self.path)
         
-        functions = self._load_functions()
+        functions = load_project_functions()
         keys = ('create_dataset', 'validation_splits', 'define_params')
         for k in keys:
             del functions[k]
