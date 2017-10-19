@@ -18,6 +18,7 @@ from mlproject.utils.log import init_log, print_and_log as print_
 from mlproject.utils.log import ProgressTable
 
 
+
 # ask to add a comment for the batch of model maybe in the parameters files ?
 
 class TrainWrapper(BaseAPI):
@@ -33,10 +34,8 @@ class TrainWrapper(BaseAPI):
 
         # function to compute the score
         self.metric = kwargs.get('metric')
-
         # function to make submission file for Data Science Competition
         self.make_submit = kwargs.get('make_submit', None)
-
         # function for target preprocess and postprocess
         self.target_preprocess = kwargs.get('target_preprocess', lambda x: x)
         self.target_postprocess = kwargs.get('target_postprocess', lambda x: x)
@@ -49,7 +48,7 @@ class TrainWrapper(BaseAPI):
             self.logger = init_log(self.path)
 
         # load data
-        self._load_data()
+        self._load_infos()
 
     def _startup_message(self):
         print_(self.logger, "\n\nStarting")
@@ -58,7 +57,7 @@ class TrainWrapper(BaseAPI):
             print_(self.logger, model.name)
         print_(self.logger, "")
 
-    def _load_data(self):
+    def _load_infos(self):
         """Load infos.pkl, attributes and validation"""
         infos = dict()
         if exists(join(self.path, 'infos.pkl')):
@@ -70,6 +69,11 @@ class TrainWrapper(BaseAPI):
         self._load_attributes()
         # load validation indexes
         self.validation = pickle_load(join(self.path, 'validation.pkl'))
+
+        # flag to test data
+        self.test_data = True
+        if self.test_shape is None:
+            self.test_data = False
 
     def _load_data_ext(self, path, ext):
         """load a dataset"""
@@ -112,7 +116,8 @@ class TrainWrapper(BaseAPI):
 
         verbose = self.verbose
         n_samples_train, n_features = self.train_shape
-        n_samples_test, _ = self.test_shape
+        if self.test_data:
+            n_samples_test, _ = self.test_shape
         n_class = self.n_class
 
         metric = self.metric
@@ -137,7 +142,8 @@ class TrainWrapper(BaseAPI):
                 progress = ProgressTable(self.logger)
 
             # load test set
-            xtest = self.load_test(model_wrapper.ext)
+            if self.test_data:
+                xtest = self.load_test(model_wrapper.ext)
 
             # define model name and model folder to model cls
             model_wrapper.name = '_'.join([model_wrapper.name, model_id])
@@ -148,7 +154,8 @@ class TrainWrapper(BaseAPI):
 
             # out of fold prediction for stacking
             train_stack = np.zeros((n_samples_train, n_class))
-            test_stack = np.zeros((n_samples_test, n_class*nfolds))
+            if self.test_data:
+                test_stack = np.zeros((n_samples_test, n_class*nfolds))
 
             # bagged scores
             all_scores_tr, all_scores_va = [], []
@@ -216,12 +223,14 @@ class TrainWrapper(BaseAPI):
                 progress.score('/', '/', mean_tr, mean_va, start_loop, end_loop)
 
                 # predict each fold model on test dataset
-                test_stack += self.target_postprocess(model.predict(xtest))
+                if self.test_data:
+                    test_stack += self.target_postprocess(model.predict(xtest))
 
             # averaging probabilities by the number of model in bagging
             train_stack /= nbag
-            test_stack /= nbag
-            test_stack =  test_stack.mean(1)
+            if self.test_data:
+                test_stack /= nbag
+                test_stack =  test_stack.mean(1)
 
             # compute total score
             score = metric(self.y_train, train_stack, 
@@ -241,10 +250,11 @@ class TrainWrapper(BaseAPI):
                 print_(self.logger, msg.format(score, *stats, diff))
 
             pickle_dump(train_stack, join(model.folder, 'train_stack.pkl'))
-            pickle_dump(test_stack, join(model.folder, 'test_stack.pkl'))
+            if self.test_data:
+                pickle_dump(test_stack, join(model.folder, 'test_stack.pkl'))
 
             # make submit if submit is True and id self.id_test exist
-            if submit and hasattr(self, 'id_test'):
+            if self.test_data and submit and hasattr(self, 'id_test'):
                 # compute test score if we have the test target
                 score_test = None
                 if self.y_test is not None:

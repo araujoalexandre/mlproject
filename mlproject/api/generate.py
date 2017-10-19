@@ -30,10 +30,12 @@ from mlproject.utils.functions import format_timedelta
 
 class GenerateWrapper(BaseAPI):
 
-    def __init__(self, parameters, functions, extensions):
+    def __init__(self, parameters, create_dataset, validation_splits, 
+                    extensions=None):
 
-        self.functions = functions
         self.params = parameters
+        self.func_dataset = create_dataset
+        self.func_splits = validation_splits
         self.extensions = extensions
 
         self.project = ProjectPath(parameters.project_path)
@@ -153,6 +155,8 @@ class GenerateWrapper(BaseAPI):
 
     def _cleaning(self, df):
         """Remove target, id, group and weights features"""
+        if df is None:
+            return None
         # remove space in columns names and convert to str
         features = list(df.columns)
         for i, feat in enumerate(features):
@@ -178,8 +182,12 @@ class GenerateWrapper(BaseAPI):
 
     def _get_infos(self, dataset, df):
         """get infos from DataFrame"""
-        setattr(self, '{}_shape'.format(dataset), df.shape)
-        setattr(self, '{}_cols_name'.format(dataset), list(df.columns))
+        if df is None:
+            setattr(self, '{}_shape'.format(dataset), None)
+            setattr(self, '{}_cols_name'.format(dataset), None)
+        else:
+            setattr(self, '{}_shape'.format(dataset), df.shape)
+            setattr(self, '{}_cols_name'.format(dataset), list(df.columns))
 
     def _create_feature_map(self):
         """create features mapping for XGBoost features importance"""
@@ -241,23 +249,19 @@ class GenerateWrapper(BaseAPI):
         # Generate df_train & df_test
         print_(self.logger, "\ncreating train/test dataset")
         start = datetime.now()
-        df_train, df_test = self.functions['create_dataset'](validation_index)
+        df_train, df_test = self.func_dataset(validation_index)
         print_(self.logger, 
             ("train/test set done in {hours:02d}:{minutes:02d}:{seconds:02d}"
                 ).format(**format_timedelta(datetime.now() - start)))
-
         # save infos
         self._get_infos('train', df_train)
         self._get_infos('test', df_test)
-
         # clean dataset
         df_train = self._cleaning(df_train)
         df_test = self._cleaning(df_test)
-
         # conformity tests between train and test before dumping train
         if df_test is not None:
             self._conformity_test()
-
         return df_train, df_test
 
     def generate_project(self):
@@ -268,12 +272,12 @@ class GenerateWrapper(BaseAPI):
         for seed_value in self.params.seeds:
 
             # create validation splits
-            self.validation += [self.functions['validation_splits'](
-                                            self.params.n_folds, 
-                                            self.y_train,
-                                            seed_value,
-                                            self.groups_train
-                                            )]
+            self.validation += [self.func_splits(
+                                        self.params.n_folds, 
+                                        self.y_train,
+                                        seed_value,
+                                        self.groups_train
+                                        )]
 
             df_train, df_test = self.create_dataset(self.validation[-1])
 
